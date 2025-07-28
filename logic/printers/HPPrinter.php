@@ -1,6 +1,8 @@
 <?php
 namespace d3yii2\d3printeripp\logic\printers;
 
+use d3yii2\d3printeripp\logic\BasePrinter;
+
 /**
  * HP Printer specific implementation
  */

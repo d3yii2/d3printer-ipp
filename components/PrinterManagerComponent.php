@@ -4,8 +4,8 @@ namespace d3yii2\d3printeripp\components;
 
 use yii\base\Component;
 use yii\base\InvalidConfigException;
-use app\components\printer\PrinterManager;
-use app\components\printer\PrinterFactory;
+use d3yii2\d3printeripp\logic\PrinterManager;
+use d3yii2\d3printeripp\logic\PrinterFactory;
 
 /**
  * Yii2 Application Component for Printer Management
@@ -14,7 +14,7 @@ use app\components\printer\PrinterFactory;
  * 
  * 'components' => [
  *     'printerManager' => [
- *         'class' => 'app\components\PrinterManagerComponent',
+ *         'class' => 'd3yii2\d3printeripp\components\PrinterManagerComponent',
  *         'printers' => [
  *             'office_hp' => [
  *                 'type' => 'hp',

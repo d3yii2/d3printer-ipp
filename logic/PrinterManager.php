@@ -1,6 +1,6 @@
 <?php
 
-namespace d3yii2\d3printeripp\logic\printers;
+namespace d3yii2\d3printeripp\logic;
 
 /**
  * Main Printer Manager class

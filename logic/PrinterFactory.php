@@ -2,6 +2,8 @@
 
 namespace d3yii2\d3printeripp\logic;
 
+use d3yii2\d3printeripp\logic\printers\HPPrinter;
+
 /**
  * Printer Factory for creating printer instances
  */
