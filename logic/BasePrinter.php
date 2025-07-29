@@ -3,6 +3,7 @@
 namespace d3yii2\d3printeripp\logic;
 
 
+use d3yii2\d3printeripp\logic\PrinterAttributes;
 use d3yii2\d3printeripp\types\PrinterAttributesTypes;
 use obray\ipp\Attribute;
 use obray\ipp\enums\PrinterState;
@@ -10,7 +11,6 @@ use obray\ipp\Printer as IppPrinterClient;
 use d3yii2\d3printeripp\interfaces\PrinterInterface;
 use obray\ipp\transport\IPPPayload;
 use yii\base\Exception;
-use d3yii2\d3printeripp\logic\PrinterAttributes;
 
 /**
  * Base abstract class for printer implementations
@@ -86,28 +86,42 @@ abstract class BasePrinter implements PrinterInterface
 
     public function getSuppliesStatus(): array
     {
-        $this->client->setOperationId(IPP::GET_PRINTER_ATTRIBUTES);
-        $this->client->addAttribute('requested-attributes', 'marker-levels');
-        $this->client->addAttribute('requested-attributes', 'marker-colors');
-        $this->client->addAttribute('requested-attributes', 'marker-names');
-        $this->client->addAttribute('requested-attributes', 'marker-types');
-        
-        $response = $this->client->request();
-        
-        return $this->formatSuppliesData($response['printer-attributes'] ?? []);
+        $markerLevels = PrinterAttributes::getMarkerLevels($this->config);
+        $markerColors = PrinterAttributes::getMarkerColors($this->config);
+        $markerNames = PrinterAttributes::getMarkerNames($this->config);
+        $markerTypes = PrinterAttributes::getMarkerTypes($this->config);
+
+        $nameValue = $markerNames->getAttributeValue();
+        $levelValue = $markerLevels->getAttributeValue();
+        $colorValue = $markerColors->getAttributeValue();
+        $nameValue = $markerNames->getAttributeValue();
+        $typeValue = $markerTypes->getAttributeValue();
+
+        $supplies = [
+            'name' => $nameValue ?? 'Unknown',
+            'level' => $levelValue ?? -1,
+            'color' => $colorValue ?? null,
+            'type' => $typeValue ?? null,
+            'status' => $this->getSupplyStatus($levelValue ?? -1)
+        ];
+
+        return $supplies;
     }
 
     public function getSystemInfo(): array
     {
-        $this->client->setOperationId(IPP::GET_PRINTER_ATTRIBUTES);
-        $this->client->addAttribute('requested-attributes', 'printer-info');
-        $this->client->addAttribute('requested-attributes', 'printer-make-and-model');
-        $this->client->addAttribute('requested-attributes', 'printer-location');
-        $this->client->addAttribute('requested-attributes', 'device-uri');
-        
-        $response = $this->client->request();
-        
-        return $response['printer-attributes'] ?? [];
+        $printerInfo = PrinterAttributes::getPrinterInfo($this->config);
+        $printerMakeAndModel = PrinterAttributes::getPrinterMakeAndModel($this->config);
+        $printerLocation = PrinterAttributes::getPrinterLocation($this->config);
+        $deviceUri = PrinterAttributes::getDeviceUri($this->config);
+
+
+        return [
+            'info' => $printerInfo->getAttributeValue(),
+            'model' => $printerMakeAndModel->getAttributeValue(),
+            'location' => $printerLocation,
+            'deviceUri' => $deviceUri->getAttributeValue(),
+        ];
     }
 
     public function printJob(string $document, array $options = []): array
@@ -180,30 +194,6 @@ abstract class BasePrinter implements PrinterInterface
         
         return isset($response['operation-attributes']['status-code']) &&
                $response['operation-attributes']['status-code'] === IPP::SUCCESSFUL_OK;
-    }
-
-    protected function formatSuppliesData(array $data): array
-    {
-        $supplies = [];
-        
-        if (isset($data['marker-levels']) && isset($data['marker-names'])) {
-            $levels = $data['marker-levels'];
-            $names = $data['marker-names'];
-            $colors = $data['marker-colors'] ?? [];
-            $types = $data['marker-types'] ?? [];
-            
-            for ($i = 0; $i < count($names); $i++) {
-                $supplies[] = [
-                    'name' => $names[$i] ?? 'Unknown',
-                    'level' => $levels[$i] ?? -1,
-                    'color' => $colors[$i] ?? null,
-                    'type' => $types[$i] ?? null,
-                    'status' => $this->getSupplyStatus($levels[$i] ?? -1)
-                ];
-            }
-        }
-        
-        return $supplies;
     }
 
     protected function getSupplyStatus(int $level): string
