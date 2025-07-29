@@ -48,9 +48,12 @@ class PrinterManager
         
         foreach ($this->printers as $name => $printer) {
             try {
+                /** @var BasePrinter $printer */
+
                 $status[$name] = [
                     'online' => $printer->isOnline(),
                     'status' => $printer->getStatus(),
+                    'outputTry' => $printer->getPrinterOutputTray(),
                     'supplies' => $printer->getSuppliesStatus(),
                     'system_info' => $printer->getSystemInfo(),
                     'last_check' => date('Y-m-d H:i:s')
@@ -73,6 +76,7 @@ class PrinterManager
         
         foreach ($this->printers as $name => $printer) {
             try {
+                /**  @var BasePrinter $printer */
                 $results[$name] = $printer->printJob($document, $options);
                 $results[$name]['success'] = true;
             } catch (\Exception $e) {

@@ -25,7 +25,7 @@ class PrinterConfig
         $this->password = $config['password'] ?? null;
         $this->pincode = $config['pincode'] ?? null;
         $this->encryption = $config['encryption'] ?? false;
-        $this->timeout = $config['timeout'] ?? 30;
+        $this->timeout = $config['timeout'] ?? 20;
         $this->printerType = $config['type'] ?? 'generic';
         $this->additionalSettings = $config['additional'] ?? [];
     }
@@ -37,7 +37,11 @@ class PrinterConfig
     public function getPassword(): ?string { return $this->password; }
     public function getPincode(): ?string { return $this->pincode; }
     public function getEncryption(): bool { return $this->encryption; }
-    public function setTimeout(): int { return $this->timeout; }
+    public function getTimeout(): int { return $this->timeout; }
     public function getPrinterType(): string { return $this->printerType; }
     public function getAdditionalSettings(): array { return $this->additionalSettings; }
+    public function getUri(): string
+    {
+        return 'ipp://' . $this->host . ':' . $this->port;
+    }
 }

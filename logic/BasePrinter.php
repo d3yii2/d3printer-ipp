@@ -3,170 +3,180 @@
 namespace d3yii2\d3printeripp\logic;
 
 
-use Obray\IPP\IPP;
+use d3yii2\d3printeripp\types\PrinterAttributesTypes;
+use obray\ipp\Attribute;
+use obray\ipp\enums\PrinterState;
+use obray\ipp\Printer as IppPrinterClient;
 use d3yii2\d3printeripp\interfaces\PrinterInterface;
+use obray\ipp\transport\IPPPayload;
+use yii\base\Exception;
+use d3yii2\d3printeripp\logic\PrinterAttributes;
 
 /**
  * Base abstract class for printer implementations
  */
 abstract class BasePrinter implements PrinterInterface
 {
-    protected $config;
-    protected $ipp;
-    protected $connected = false;
-    protected $lastError = null;
+    protected PrinterConfig $config;
+    protected IppPrinterClient $client;
+
+    protected ?string $lastError = null;
+    protected ?string $printUri = null;
+    protected ?IPPPayload $responsePayload = null;
+
+    protected const JOB_ID = 'job-id';
+    protected const JOB_STATE = 'job-state';
+    protected const JOB_STATE_MESSAGE = 'job-state-message';
+    protected const JOB_STATE_REASONS = 'job-state-reasons';
+    protected const JOB_URI = 'job-uri';
 
     public function __construct(PrinterConfig $config)
     {
         $this->config = $config;
-        $this->initializeIPP();
+        $this->init();
     }
 
-    protected function initializeIPP(): void
+    protected function init(): void
     {
-        $this->ipp = new IPP();
-        $this->ipp->setHost($this->config->getHost());
-        $this->ipp->setPort($this->config->getPort());
-        
-        if ($this->config->getUsername()) {
-            $this->ipp->setUsername($this->config->getUsername());
-        }
-        
-        if ($this->config->getPassword()) {
-            $this->ipp->setPassword($this->config->getPassword());
-        }
-        
-        $this->ipp->setTimeout($this->config->getTimeout());
+        $this->client = new IppPrinterClient(
+            $this->config->getUri(),
+            $this->config->getUsername(),
+            $this->config->getPassword()
+        );
     }
 
-    public function connect(): bool
+    protected function getClient(): IppPrinterClient
     {
-        try {
-            // Perform connection test with printer attributes request
-            $this->ipp->setOperationId(IPP::GET_PRINTER_ATTRIBUTES);
-            $response = $this->ipp->request();
-            
-            if ($response && !empty($response['printer-attributes'])) {
-                $this->connected = true;
-                return true;
-            }
-        } catch (\Exception $e) {
-            $this->lastError = $e->getMessage();
-        }
-        
-        $this->connected = false;
-        return false;
+        return $this->client;
     }
 
-    public function disconnect(): void
-    {
-        $this->connected = false;
-        // IPP connections are stateless, so no explicit disconnect needed
-    }
 
     public function isOnline(): bool
     {
-        if (!$this->connected) {
-            return $this->connect();
-        }
-        
         try {
             $status = $this->getStatus();
-            return isset($status['printer-state']) && 
-                   $status['printer-state'] !== 'stopped';
+
+            // idle|processing|stopped
+            return $status !== 'stopped';
         } catch (\Exception $e) {
             return false;
         }
     }
 
-    public function getStatus(): array
+    public function getStatus(): bool
     {
-        $this->ipp->setOperationId(IPP::GET_PRINTER_ATTRIBUTES);
-        $this->ipp->addAttribute('requested-attributes', 'printer-state');
-        $this->ipp->addAttribute('requested-attributes', 'printer-state-reasons');
-        $this->ipp->addAttribute('requested-attributes', 'printer-state-message');
-        
-        $response = $this->ipp->request();
-        
-        return $response['printer-attributes'] ?? [];
+        try {
+            $state = PrinterAttributes::getPrinterState($this->config);
+
+            return $state->__toString();
+
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
+    public function getPrinterOutputTray(): string
+    {
+
+        $try = PrinterAttributes::getPrinterOutputTray($this->config);
+
+        return $try->getAttributeValue(); //->decode($tryAttributeValues);
+
     }
 
     public function getSuppliesStatus(): array
     {
-        $this->ipp->setOperationId(IPP::GET_PRINTER_ATTRIBUTES);
-        $this->ipp->addAttribute('requested-attributes', 'marker-levels');
-        $this->ipp->addAttribute('requested-attributes', 'marker-colors');
-        $this->ipp->addAttribute('requested-attributes', 'marker-names');
-        $this->ipp->addAttribute('requested-attributes', 'marker-types');
+        $this->client->setOperationId(IPP::GET_PRINTER_ATTRIBUTES);
+        $this->client->addAttribute('requested-attributes', 'marker-levels');
+        $this->client->addAttribute('requested-attributes', 'marker-colors');
+        $this->client->addAttribute('requested-attributes', 'marker-names');
+        $this->client->addAttribute('requested-attributes', 'marker-types');
         
-        $response = $this->ipp->request();
+        $response = $this->client->request();
         
         return $this->formatSuppliesData($response['printer-attributes'] ?? []);
     }
 
     public function getSystemInfo(): array
     {
-        $this->ipp->setOperationId(IPP::GET_PRINTER_ATTRIBUTES);
-        $this->ipp->addAttribute('requested-attributes', 'printer-info');
-        $this->ipp->addAttribute('requested-attributes', 'printer-make-and-model');
-        $this->ipp->addAttribute('requested-attributes', 'printer-location');
-        $this->ipp->addAttribute('requested-attributes', 'device-uri');
+        $this->client->setOperationId(IPP::GET_PRINTER_ATTRIBUTES);
+        $this->client->addAttribute('requested-attributes', 'printer-info');
+        $this->client->addAttribute('requested-attributes', 'printer-make-and-model');
+        $this->client->addAttribute('requested-attributes', 'printer-location');
+        $this->client->addAttribute('requested-attributes', 'device-uri');
         
-        $response = $this->ipp->request();
+        $response = $this->client->request();
         
         return $response['printer-attributes'] ?? [];
     }
 
     public function printJob(string $document, array $options = []): array
     {
-        $this->ipp->setOperationId(IPP::PRINT_JOB);
-        $this->ipp->setData($document);
-        
-        // Set job attributes
-        if (isset($options['job-name'])) {
-            $this->ipp->addAttribute('job-name', $options['job-name']);
-        }
-        
-        if (isset($options['copies'])) {
-            $this->ipp->addAttribute('copies', (int)$options['copies']);
-        }
-        
-        // Add custom options
-        foreach ($options as $key => $value) {
-            if (!in_array($key, ['job-name', 'copies'])) {
-                $this->ipp->addAttribute($key, $value);
+        $currentLimit = ini_get('max_execution_time');
+        set_time_limit($this->config->getTimeout());
+        $ipp = $this->getClient();
+        usleep(1000000);
+        $tryCounter = 1;
+        while ($tryCounter <= 5) {
+            $requestId = 1;
+            /** @var IPPPayload $response */
+            $response = $ipp->printJob($document, $requestId, $options);
+            if ($response->statusCode->getClass() === 'successful') {
+                set_time_limit($currentLimit);
+
+                $jobAttributes = $response->jobAttributes->attributes ?? [];
+
+                /** @var Attribute $jobId */
+                $jobId = $jobAttributes[self::JOB_ID]->value ?? null;
+
+                /** @var Attribute $jobState */
+                $jobState = $jobAttributes[self::JOB_STATE]->value ?? null;
+
+                /** @var Attribute $jobStateMessage */
+                $jobStateMessage = $jobAttributes[self::JOB_STATE_MESSAGE]->value ?? null;
+
+                /** @var Attribute $jobStateReasons */
+                $jobStateReasons = $jobAttributes[self::JOB_STATE_REASONS]->value ?? null;
+
+                /** @var Attribute $jobUri */
+                $jobUri = $jobAttributes[self::JOB_URI]->value ?? null;
+
+
+                return [
+                    self::JOB_ID => $jobId->getAttributeValue(),
+                    self::JOB_STATE => $jobState->getAttributeValue(),
+                    self::JOB_STATE_MESSAGE => $jobStateMessage->getAttributeValue(),
+                    self::JOB_STATE_REASONS => $jobStateReasons->getAttributeValue(),
+                    self::JOB_URI => $jobUri->getAttributeValue(),
+                ];
             }
+            $tryCounter++;
+            usleep(1000000);
         }
-        
-        $response = $this->ipp->request();
-        
-        return [
-            'job-id' => $response['job-attributes']['job-id'] ?? null,
-            'job-uri' => $response['job-attributes']['job-uri'] ?? null,
-            'job-state' => $response['job-attributes']['job-state'] ?? null,
-            'success' => isset($response['job-attributes']['job-id'])
-        ];
+        set_time_limit($currentLimit);
+
+        throw new Exception('Can not print! ' . PHP_EOL . 'response: ' . $response->statusCode);
     }
 
     public function getJobs(): array
     {
-        $this->ipp->setOperationId(IPP::GET_JOBS);
-        $this->ipp->addAttribute('requested-attributes', 'job-id');
-        $this->ipp->addAttribute('requested-attributes', 'job-name');
-        $this->ipp->addAttribute('requested-attributes', 'job-state');
-        $this->ipp->addAttribute('requested-attributes', 'job-state-reasons');
+        $this->client->setOperationId(IPP::GET_JOBS);
+        $this->client->addAttribute('requested-attributes', 'job-id');
+        $this->client->addAttribute('requested-attributes', 'job-name');
+        $this->client->addAttribute('requested-attributes', 'job-state');
+        $this->client->addAttribute('requested-attributes', 'job-state-reasons');
         
-        $response = $this->ipp->request();
+        $response = $this->client->request();
         
-        return $response['job-attributes'] ?? [];
+        return $jobAttributes ?? [];
     }
 
     public function cancelJob(int $jobId): bool
     {
-        $this->ipp->setOperationId(IPP::CANCEL_JOB);
-        $this->ipp->addAttribute('job-id', $jobId);
+        $this->client->setOperationId(IPP::CANCEL_JOB);
+        $this->client->addAttribute('job-id', $jobId);
         
-        $response = $this->ipp->request();
+        $response = $this->client->request();
         
         return isset($response['operation-attributes']['status-code']) &&
                $response['operation-attributes']['status-code'] === IPP::SUCCESSFUL_OK;

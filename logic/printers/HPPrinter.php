@@ -2,11 +2,12 @@
 namespace d3yii2\d3printeripp\logic\printers;
 
 use d3yii2\d3printeripp\logic\BasePrinter;
+use d3yii2\d3printeripp\interfaces\PrinterInterface;
 
 /**
  * HP Printer specific implementation
  */
-class HPPrinter extends BasePrinter
+class HPPrinter extends BasePrinter implements PrinterInterface
 {
     public function getSuppliesStatus(): array
     {
@@ -19,9 +20,14 @@ class HPPrinter extends BasePrinter
 
     public function printJob(string $document, array $options = []): array
     {
-        // Canon-specific print job handling
+        // HP-specific print job handling
         $hpOptions = $this->processhpOptions($options);
         return parent::printJob($document, $hpOptions);
+    }
+
+    private function processhpOptions(array $options = [])
+    {
+        return $options;
     }
 
     private function processHPSupplies(array $supplies): array

@@ -3,20 +3,29 @@
 namespace d3yii2\d3printeripp\commands;
 
 
+use d3yii2\d3printeripp\components\PrinterManagerComponent;
+
 /**
  * Example Console Command for printer management
  */
 class PrinterCommand extends \yii\console\Controller
 {
+    private PrinterManagerComponent $printerManager;
+
+    public function init()
+    {
+        $this->printerManager = \Yii::$app->printerManager;
+    }
+
     /**
      * Check all printer health
      */
-    public function actionHealth()
+    public function actionHealthAll()
     {
-        $printerManager = \Yii::$app->printerManager;
-        $health = $printerManager->getHealthStatus(true); // Force refresh
+        $health = $this->printerManager->getHealthStatus(true); // Force refresh
         
         foreach ($health as $printerName => $status) {
+            print_r($status);
             $this->stdout("Printer: {$printerName}\n");
             $this->stdout("Online: " . ($status['online'] ? 'Yes' : 'No') . "\n");
             
@@ -40,8 +49,6 @@ class PrinterCommand extends \yii\console\Controller
      */
     public function actionTestPrint()
     {
-        $printerManager = \Yii::$app->printerManager;
-        
         // Create a simple test document (PostScript)
         $testDocument = "%!PS-Adobe-3.0\n";
         $testDocument .= "72 720 moveto\n";
@@ -53,7 +60,7 @@ class PrinterCommand extends \yii\console\Controller
             'job-name' => 'Test Print Command'
         ];
         
-        $results = $printerManager->printToAll($testDocument, $options);
+        $results = $this->printerManager->printToAll($testDocument, $options);
         
         foreach ($results as $printerName => $result) {
             $this->stdout("Printer: {$printerName}\n");
