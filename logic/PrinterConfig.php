@@ -7,18 +7,20 @@ namespace d3yii2\d3printeripp\logic;
  */
 class PrinterConfig
 {
-    private $host;
-    private $port;
-    private $username;
-    private $password;
-    private $pincode;
-    private $encryption;
-    private $timeout;
-    private $printerType;
-    private $additionalSettings;
+    private string $name;
+    private string $host;
+    private int $port;
+    private string $username;
+    private string $password;
+    private string $pincode;
+    private bool $encryption;
+    private int $timeout;
+    private string $printerType;
+    private array $additionalSettings;
 
     public function __construct(array $config)
     {
+        $this->name = $config['name'] ?? null;
         $this->host = $config['host'] ?? null;
         $this->port = $config['port'] ?? 631;
         $this->username = $config['username'] ?? null;
@@ -31,6 +33,7 @@ class PrinterConfig
     }
 
     // Getters
+    public function getName(): ?string { return $this->name; }
     public function getHost(): ?string { return $this->host; }
     public function getPort(): int { return $this->port; }
     public function getUsername(): ?string { return $this->username; }

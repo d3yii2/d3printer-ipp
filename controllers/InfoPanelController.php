@@ -39,10 +39,11 @@ class InfoPanelController extends Controller
     /**
      * @return string
      */
-    public function actionStatus(string $printerComponent, string $healthComponent): string
+    public function actionStatus(string $printerSlug): string
     {
         try {
-            $logic = new DisplayDataLogic($printerComponent, $healthComponent);
+
+            $logic = new DisplayDataLogic($printerSlug);
 
             $displayData = $logic->getTableDisplayData();
 

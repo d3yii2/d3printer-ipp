@@ -17,6 +17,7 @@ use d3yii2\d3printeripp\logic\PrinterFactory;
  *         'class' => 'd3yii2\d3printeripp\components\PrinterManagerComponent',
  *         'printers' => [
  *             'office_hp' => [
+ *                 'name' => 'Office HP printer',
  *                 'type' => 'hp',
  *                 'host' => '192.168.1.100',
  *                 'port' => 631,
@@ -25,6 +26,7 @@ use d3yii2\d3printeripp\logic\PrinterFactory;
  *                 'timeout' => 30
  *             ],
  *             'warehouse_canon' => [
+ *                 'name' => 'Warehouse printer',
  *                 'type' => 'canon',
  *                 'host' => '192.168.1.101',
  *                 'port' => 631,
@@ -78,8 +80,8 @@ class PrinterManagerComponent extends Component
         $this->printerManager = new PrinterManager();
         
         // Add all configured printers
-        foreach ($this->printers as $name => $config) {
-            $this->printerManager->addPrinter($name, $config);
+        foreach ($this->printers as $slug => $config) {
+            $this->printerManager->addPrinter($slug, $config);
         }
         
         if ($this->autoConnect) {
@@ -90,27 +92,9 @@ class PrinterManagerComponent extends Component
     /**
      * Get printer by name
      */
-    public function getPrinter(string $name)
+    public function getPrinter(string $slug)
     {
-        return $this->printerManager->getPrinter($name);
-    }
-
-    /**
-     * Add new printer at runtime
-     */
-    public function addPrinter(string $name, array $config): void
-    {
-        $this->printers[$name] = $config;
-        $this->printerManager->addPrinter($name, $config);
-    }
-
-    /**
-     * Remove printer
-     */
-    public function removePrinter(string $name): void
-    {
-        unset($this->printers[$name]);
-        $this->printerManager->removePrinter($name);
+        return $this->printerManager->getPrinter($slug);
     }
 
     /**
@@ -119,22 +103,6 @@ class PrinterManagerComponent extends Component
     public function getAllPrinters(): array
     {
         return $this->printerManager->getAllPrinters();
-    }
-
-    /**
-     * Connect to all printers
-     */
-    public function connectAll(): array
-    {
-        return $this->printerManager->connectAll();
-    }
-
-    /**
-     * Disconnect from all printers
-     */
-    public function disconnectAll(): void
-    {
-        $this->printerManager->disconnectAll();
     }
 
     /**
@@ -157,12 +125,12 @@ class PrinterManagerComponent extends Component
     /**
      * Print document to specific printer
      */
-    public function print(string $printerName, string $document, array $options = []): array
+    public function print(string $slug, string $document, array $options = []): array
     {
-        $printer = $this->getPrinter($printerName);
+        $printer = $this->getPrinter($slug);
         
         if (!$printer) {
-            throw new InvalidConfigException("Printer '{$printerName}' not found.");
+            throw new InvalidConfigException("Printer '{$slug}' not found.");
         }
         
         return $printer->printJob($document, $options);
@@ -249,10 +217,10 @@ class PrinterController extends \yii\web\Controller
     /**
      * Get printer health status
      */
-    public function actionHealth()
+    public function actionHealth(string $slug)
     {
         $printerManager = \Yii::$app->printerManager;
-        $health = $printerManager->getHealthStatus();
+        $health = $printerManager->getHealthStatus($slug);
         
         return $this->asJson($health);
     }
@@ -260,10 +228,10 @@ class PrinterController extends \yii\web\Controller
     /**
      * Get specific printer status
      */
-    public function actionStatus($printerName)
+    public function actionStatus($slug)
     {
         $printerManager = \Yii::$app->printerManager;
-        $printer = $printerManager->getPrinter($printerName);
+        $printer = $printerManager->getPrinter($slug);
         
         if (!$printer) {
             throw new \yii\web\NotFoundHttpException("Printer not found");
@@ -291,10 +259,10 @@ class PrinterController extends \yii\web\Controller
     /**
      * Cancel a print job
      */
-    public function actionCancelJob($printerName, $jobId)
+    public function actionCancelJob($slug, $jobId)
     {
         $printerManager = \Yii::$app->printerManager;
-        $printer = $printerManager->getPrinter($printerName);
+        $printer = $printerManager->getPrinter($slug);
         
         if (!$printer) {
             throw new \yii\web\NotFoundHttpException("Printer not found");
@@ -308,46 +276,5 @@ class PrinterController extends \yii\web\Controller
         ]);
     }
 
-    /**
-     * Add new printer at runtime
-     */
-    public function actionAddPrinter()
-    {
-        $request = \Yii::$app->request;
-        
-        $config = [
-            'type' => $request->post('type', 'generic'),
-            'host' => $request->post('host'),
-            'port' => (int)$request->post('port', 631),
-            'username' => $request->post('username'),
-            'password' => $request->post('password'),
-            'pincode' => $request->post('pincode'),
-            'encryption' => (bool)$request->post('encryption', false),
-            'timeout' => (int)$request->post('timeout', 30)
-        ];
-        
-        $name = $request->post('name');
-        
-        try {
-            $printerManager = \Yii::$app->printerManager;
-            $printerManager->addPrinter($name, $config);
-            
-            // Test connection
-            $printer = $printerManager->getPrinter($name);
-            $connected = $printer->connect();
-            
-            return $this->asJson([
-                'success' => true,
-                'connected' => $connected,
-                'message' => $connected ? 'Printer added and connected' : 'Printer added but connection failed'
-            ]);
-            
-        } catch (\Exception $e) {
-            return $this->asJson([
-                'success' => false,
-                'message' => $e->getMessage()
-            ]);
-        }
-    }
 }
 

@@ -36,6 +36,12 @@ abstract class BasePrinter implements PrinterInterface
         $this->init();
     }
 
+    public function getConfig(): PrinterConfig
+    {
+        return $this->config;
+    }
+
+
     protected function init(): void
     {
         $this->client = new IppPrinterClient(
@@ -50,6 +56,10 @@ abstract class BasePrinter implements PrinterInterface
         return $this->client;
     }
 
+    public function getName()
+    {
+        return $this->config->getName();
+    }
 
     public function isOnline(): bool
     {
