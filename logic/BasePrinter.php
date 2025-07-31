@@ -3,6 +3,9 @@
 namespace d3yii2\d3printeripp\logic;
 
 
+use d3yii2\d3printeripp\logic\AlertConfig;
+use d3yii2\d3printeripp\logic\PrinterHealth;
+use d3yii2\d3printeripp\logic\PrinterSpooler;
 use d3yii2\d3printeripp\logic\PrinterAttributes;
 use d3yii2\d3printeripp\types\PrinterAttributesTypes;
 use obray\ipp\Attribute;
@@ -18,6 +21,10 @@ use yii\base\Exception;
 abstract class BasePrinter implements PrinterInterface
 {
     protected PrinterConfig $config;
+    protected PrinterAttributes $printerAttributes;
+    protected ?PrinterDaemon $daemon = null;
+    protected ?PrinterSpooler $spooler = null;
+    protected ?PrinterHealth $health = null;
     protected IppPrinterClient $client;
 
     protected ?string $lastError = null;
@@ -41,6 +48,21 @@ abstract class BasePrinter implements PrinterInterface
         return $this->config;
     }
 
+    public function getDaemon(): PrinterDaemon
+    {
+        return $this->daemon;
+    }
+
+    public function getSpooler(): PrinterSpooler
+    {
+        return $this->spooler;
+    }
+
+    public function getHealth(): PrinterHealth
+    {
+        return $this->health;
+    }
+
 
     protected function init(): void
     {
@@ -49,6 +71,11 @@ abstract class BasePrinter implements PrinterInterface
             $this->config->getUsername(),
             $this->config->getPassword()
         );
+
+        $this->printerAttributes = new PrinterAttributes($this->config);
+        $this->daemon = new PrinterDaemon($this->config);
+        $this->spooler = new PrinterSpooler($this->config);
+        $this->health = new PrinterHealth($this->config, new AlertConfig($this->config), $this->printerAttributes);
     }
 
     protected function getClient(): IppPrinterClient
@@ -76,7 +103,7 @@ abstract class BasePrinter implements PrinterInterface
     public function getStatus(): bool
     {
         try {
-            $state = PrinterAttributes::getPrinterState($this->config);
+            $state = $this->printerAttributes->getPrinterState();
 
             return $state->__toString();
 
@@ -88,7 +115,7 @@ abstract class BasePrinter implements PrinterInterface
     public function getPrinterOutputTray(): string
     {
 
-        $try = PrinterAttributes::getPrinterOutputTray($this->config);
+        $try = $this->printerAttributes->getPrinterOutputTray();
 
         return $try->getAttributeValue(); //->decode($tryAttributeValues);
 
@@ -96,10 +123,10 @@ abstract class BasePrinter implements PrinterInterface
 
     public function getSuppliesStatus(): array
     {
-        $markerLevels = PrinterAttributes::getMarkerLevels($this->config);
-        $markerColors = PrinterAttributes::getMarkerColors($this->config);
-        $markerNames = PrinterAttributes::getMarkerNames($this->config);
-        $markerTypes = PrinterAttributes::getMarkerTypes($this->config);
+        $markerLevels = $this->printerAttributes->getMarkerLevels();
+        $markerColors = $this->printerAttributes->getMarkerColors();
+        $markerNames = $this->printerAttributes->getMarkerNames();
+        $markerTypes = $this->printerAttributes->getMarkerTypes();
 
         $nameValue = $markerNames->getAttributeValue();
         $levelValue = $markerLevels->getAttributeValue();
@@ -118,12 +145,28 @@ abstract class BasePrinter implements PrinterInterface
         return $supplies;
     }
 
+    public function getFtpStatus()
+    {
+
+    }
+
+    public function getSpoolerStatus()
+    {
+
+    }
+
+    public function getDaemonStatus()
+    {
+        $daemon = new Daemon($this->config);
+        return $daemon->getStatus();
+    }
+
     public function getSystemInfo(): array
     {
-        $printerInfo = PrinterAttributes::getPrinterInfo($this->config);
-        $printerMakeAndModel = PrinterAttributes::getPrinterMakeAndModel($this->config);
-        $printerLocation = PrinterAttributes::getPrinterLocation($this->config);
-        $deviceUri = PrinterAttributes::getDeviceUri($this->config);
+        $printerInfo = $this->printerAttributes->getPrinterInfo();
+        $printerMakeAndModel = $this->printerAttributes->getPrinterMakeAndModel();
+        $printerLocation = $this->printerAttributes->getPrinterLocation();
+        $deviceUri = $this->printerAttributes->getDeviceUri();
 
 
         return [

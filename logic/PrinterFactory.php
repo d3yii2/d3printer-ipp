@@ -16,8 +16,9 @@ class PrinterFactory
         //'canon' => CanonPrinter::class,
     ];
 
-    public static function create(string $printerType, PrinterConfig $config): PrinterInterface
+    public static function create(PrinterConfig $config): PrinterInterface
     {
+        $printerType = $config->getPrinterType();
         $className = self::$printerTypes[$printerType] ?? self::$printerTypes['generic'];
         
         if (!class_exists($className)) {

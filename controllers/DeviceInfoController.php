@@ -6,7 +6,6 @@ use d3system\actions\D3SettingAction;
 use d3system\yii2\web\D3SystemView;
 use d3yii2\d3printeripp\accessRights\D3PrinterFullUserRole;
 use d3yii2\d3printeripp\components\D3Printer;
-use d3yii2\d3printeripp\logic\health\ConfigurationHealth;
 use d3yii2\d3printeripp\models\AlertSettings;
 use eaBlankonThema\components\FlashHelper;
 use eaBlankonThema\yii2\web\LayoutController;

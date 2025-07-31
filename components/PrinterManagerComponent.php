@@ -80,12 +80,8 @@ class PrinterManagerComponent extends Component
         $this->printerManager = new PrinterManager();
         
         // Add all configured printers
-        foreach ($this->printers as $slug => $config) {
-            $this->printerManager->addPrinter($slug, $config);
-        }
-        
-        if ($this->autoConnect) {
-            $this->connectAll();
+        foreach ($this->printers as $config) {
+            $this->printerManager->addPrinter($config);
         }
     }
 

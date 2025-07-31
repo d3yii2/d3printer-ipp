@@ -18,162 +18,167 @@ use obray\ipp\PrinterAttributes as IPPPrinterAttributes;
  */
 class PrinterAttributes
 {
-    protected static ?IPPPayload $responsePayload = null;
+    protected ?IPPPrinterAttributes $attributes = null;
+    protected ?PrinterConfig $printerConfig;
 
+
+    public function __construct(PrinterConfig $config)
+    {
+        $this->printerConfig = $config;
+        $this->attributes = $this->getAll();
+    }
 
     /**
      * @return IPPPrinterAttributes
      */
-    protected static function getAll(PrinterConfig $config): IPPPrinterAttributes
+    protected function getAll(): IPPPrinterAttributes
     {
-        $printerAttributes = self::$responsePayload->printerAttributes[0] ?? null;
-
-        if ($printerAttributes) {
-            return $printerAttributes;
+        if ($this->attributes) {
+            return $this->attributes;
         }
 
-        self::$responsePayload = Request::get($config, \obray\ipp\types\Operation::GET_PRINTER_ATTRIBUTES);
+        $responsePatyload = Request::get($this->printerConfig, \obray\ipp\types\Operation::GET_PRINTER_ATTRIBUTES);
 
-        if (self::$responsePayload) {
-            $printerAttributes = self::$responsePayload->printerAttributes ?? null;
+        $printerAttributes = $responsePatyload->printerAttributes ?? null;
 
-            if (!empty($printerAttributes[0]) && $printerAttributes[0] instanceof IPPPrinterAttributes) {
-                return $printerAttributes[0];
-            }
+        if (!empty($printerAttributes[0]) && $printerAttributes[0] instanceof IPPPrinterAttributes) {
+            $this->attributes = $printerAttributes[0];
+
+            return $this->attributes;
         }
 
         throw new Exception('Cannot request Printer attributes');
     }
 
     /**
-     * @return Attribute
+     * @param string $key
+     * @return mixed
      * @throws Exception
      */
-    public static function getPrinterState(PrinterConfig $config): Attribute
+    public function getAttribute(string $key)
     {
-        if (!$attributes = self::getAll($config)) {
-            throw new Exception('Cannot get Printer state');
-        }
-
-        /** @var Attribute\ $stateAttribute */
-        return $attributes->{'printer-state'};
+        return $this->attributes->{$key};
     }
 
     /**
      * @return Attribute
      * @throws Exception
      */
-    public static function getPrinterOutputTray(PrinterConfig $config): Attribute
+    public function getPrinterState(): Attribute
     {
-        if (!$attributes = self::getAll($config)) {
-            throw new Exception('Cannot get Printer Output Try');
-        }
-
-        return $attributes->{'printer-output-tray'};
+        return $this->getAttribute('printer-state');
     }
 
     /**
      * @return Attribute
      * @throws Exception
      */
-    public static function getMarkerLevels(PrinterConfig $config): Attribute
+    public function getPrinterOutputTray(): Attribute
     {
-        if (!$attributes = self::getAll($config)) {
-            throw new Exception('Cannot get Marker levels');
-        }
-
-        return $attributes->{'marker-levels'};
+        return $this->getAttribute('printer-output-tray');
     }
 
     /**
      * @return Attribute
      * @throws Exception
      */
-    public static function getMarkerColors(PrinterConfig $config): Attribute
+    public function getMarkerLevels(): Attribute
     {
-        if (!$attributes = self::getAll($config)) {
-            throw new Exception('Cannot get Marker colors');
-        }
-
-        return $attributes->{'marker-colors'};
+        return $this->getAttribute('marker-levels');
     }
 
     /**
      * @return Attribute
      * @throws Exception
      */
-    public static function getMarkerNames(PrinterConfig $config): Attribute
+    public function getMarkerColors(): Attribute
     {
-        if (!$attributes = self::getAll($config)) {
-            throw new Exception('Cannot get Marker names');
-        }
-
-        return $attributes->{'marker-names'};
+        return $this->getAttribute('marker-colors');
     }
 
     /**
      * @return Attribute
      * @throws Exception
      */
-    public static function getMarkerTypes(PrinterConfig $config): Attribute
+    public function getMarkerNames(): Attribute
     {
-        if (!$attributes = self::getAll($config)) {
-            throw new Exception('Cannot get Marker types');
-        }
-
-        return $attributes->{'marker-types'};
+        return $this->getAttribute('marker-names');
     }
 
     /**
      * @return Attribute
      * @throws Exception
      */
-    public static function getPrinterInfo(PrinterConfig $config): Attribute
+    public function getMarkerTypes(): Attribute
     {
-        if (!$attributes = self::getAll($config)) {
-            throw new Exception('Cannot get Printer info');
-        }
-
-        return $attributes->{'printer-info'};
+        return $this->getAttribute('marker-types');
     }
 
     /**
      * @return Attribute
      * @throws Exception
      */
-    public static function getPrinterMakeAndModel(PrinterConfig $config): Attribute
+    public function getPrinterInfo(): Attribute
     {
-        if (!$attributes = self::getAll($config)) {
-            throw new Exception('Cannot get Printer Make and Model');
-        }
-
-        return $attributes->{'printer-make-and-model'};
+        return $this->getAttribute('printer-info');
     }
 
     /**
      * @return Attribute
      * @throws Exception
      */
-    public static function getPrinterLocation(PrinterConfig $config): Attribute
+    public function getPrinterMakeAndModel(): Attribute
     {
-        if (!$attributes = self::getAll($config)) {
-            throw new Exception('Cannot get Printer Location');
-        }
-
-        return $attributes->{'printer-location'};
+        return $this->getAttribute('printer-make-and-model');
     }
 
     /**
      * @return Attribute
      * @throws Exception
      */
-    public static function getDeviceUri(PrinterConfig $config): Attribute
+    public function getPrinterLocation(): Attribute
     {
-        if (!$attributes = self::getAll($config)) {
-            throw new Exception('Cannot get Device Uri');
-        }
+        return $this->getAttribute('printer-location');
+    }
 
-        return $attributes->{'device-uri'};
+
+    /**
+     * @return Attribute
+     * @throws Exception
+     */
+    public function getPaperSize(): Attribute
+    {
+        //@TODO
+        return $this->getAttribute('');
+    }
+
+    /**
+     * @return Attribute
+     * @throws Exception
+     */
+    public function getPrintOrientation(): Attribute
+    {
+        //@TODO
+        return $this->getAttribute('');
+    }
+
+    /**
+     * @return Attribute
+     * @throws Exception
+     */
+    public function getDrumLevel(): Attribute
+    {
+        //@TODO
+        return $this->getAttribute('');
+    }
+
+    /**
+     * @return Attribute
+     * @throws Exception
+     */
+    public function getDeviceUri(): Attribute
+    {
+        return $this->getAttribute('device-uri');
     }
 
 }

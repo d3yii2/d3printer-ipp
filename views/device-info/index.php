@@ -1,7 +1,6 @@
 <?php
 
 use d3system\yii2\web\D3SystemView;
-use d3yii2\d3printeripp\logic\health\DeviceHealth;
 use d3yii2\d3printeripp\logic\read\ReadConfiguration;
 use eaBlankonThema\assetbundles\layout\LayoutAsset;
 use eaBlankonThema\components\FlashHelper;
