@@ -2,7 +2,7 @@
 
 namespace d3yii2\d3printeripp\logic\panel;
 
-use d3yii2\d3printeripp\interfaces\PrinterInterface;
+use d3yii2\d3printeripp\logic\BasePrinter;
 use Yii;
 use yii\base\Exception;
 use yii\helpers\Html;
@@ -14,7 +14,7 @@ class DisplayDataLogic
      */
     public $emptyDefaultValue = '-';
 
-    protected PrinterInterface $printer;
+    protected BasePrinter $printer;
 
     protected $displayData = [];
 
@@ -52,9 +52,9 @@ class DisplayDataLogic
      */
     protected function getFTPStatusDisplayValue(): string
     {
-        $isOk = !$this->printer->existDeadFile();
+        $existDeadFile = $this->printer->getSpooler()->existDeadFile();
 
-        return $isOk
+        return !$existDeadFile
             ? Html::tag('span', 'OK', ['style' => 'color:darkgreen'])
             : Html::tag('span', Yii::t('d3printeripp', 'Down'), ['style' => 'color:red']);
     }
@@ -62,12 +62,14 @@ class DisplayDataLogic
 
     public function getDaemonStatus(): string
     {
-        if ($this->daemon->statusOk()) {
-            return Html::tag('span', $this->daemon->getStatus(), ['style' => 'color:darkgreen']);
+        $daemon = $this->printer->getDaemon();
+
+        if ($daemon->statusOk()) {
+            return Html::tag('span', $daemon->getStatus(), ['style' => 'color:darkgreen']);
         }
 
-        $status = $this->daemon->getStatus();
-        $statusOutput = $status !== 'idle' ? $status : sprintf('%s (%s)', $status, $this->daemon->getRawStatus());
+        $status = $daemon->getStatus();
+        $statusOutput = $status !== 'idle' ? $status : sprintf('%s (%s)', $status, $daemon->getRawStatus());
 
         return Html::tag('span', $statusOutput, ['style' => 'color:red']);
     }
@@ -90,9 +92,9 @@ class DisplayDataLogic
         $displayData['cartridge'] = $suppliesStatus['level'];
         $displayData['drum'] = ''; //$suppliesStatus[''];
         $displayData['deviceErrors'] = ''; //$this->deviceHealth->logger->getErrors());
-        $displayData['ftpState'] = ''; //$this->getFTPStatusDisplayValue());
-        $displayData['spool'] = ''; //$this->getSpoolerFilesCount());
-        $displayData['daemonStatus'] = ''; //$this->getDaemonStatus());
+        $displayData['ftpState'] = $this->getFTPStatusDisplayValue();
+        $displayData['spool'] = $this->printer->getSpooler()->getSpoolFilesCount();
+        $displayData['daemonStatus'] = $this->getDaemonStatus();
 
 
         $data = self::DISPLAY_VERTICAL === $direction

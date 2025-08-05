@@ -50,11 +50,6 @@ class PrinterManagerComponent extends Component
     private $printerManager;
 
     /**
-     * @var bool Auto-connect to all printers on initialization
-     */
-    public $autoConnect = false;
-
-    /**
      * @var int Health check interval in seconds
      */
     public $healthCheckInterval = 300;
@@ -116,20 +111,6 @@ class PrinterManagerComponent extends Component
         }
         
         return $this->lastHealthCheck;
-    }
-
-    /**
-     * Print document to specific printer
-     */
-    public function print(string $slug, string $document, array $options = []): array
-    {
-        $printer = $this->getPrinter($slug);
-        
-        if (!$printer) {
-            throw new InvalidConfigException("Printer '{$slug}' not found.");
-        }
-        
-        return $printer->printJob($document, $options);
     }
 
     /**

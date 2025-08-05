@@ -2,6 +2,8 @@
 
 namespace d3yii2\d3printeripp\logic;
 
+use yii\base\Exception;
+
 /**
  * Class PrinterDaemon
  * @package d3yii2\d3printeripp\logic
@@ -40,7 +42,7 @@ class PrinterDaemon
             };
         }
 
-        throw new Exception (
+        /*throw new Exception(
             sprintf(
                 'Cannot parse daemon status value: %s. Printer: %s (%s). Daemon name: "%s". Command: "%s"',
                 $status,
@@ -49,23 +51,20 @@ class PrinterDaemon
                 $this->printerConfig->getDaemonName(),
                 $command
             )
-        );
+        );*/
 
         return self::STATUS_UNKNOW;
     }
 
     public function statusOk(): bool
     {
-        if($this->getStatus() === self::STATUS_ACTIVE) {
+        if ($this->getStatus() === self::STATUS_ACTIVE) {
             return true;
         }
 
         $status = $this->getStatus();
-        $statusOutput = $status !== DaemonHealth::STATUS_UNKNOW ? $status : sprintf('%s (%s)', $status, $this->getRawStatus());
 
-        $this->logger->addError('Daemon looks down! Status: "' . $statusOutput . '"');
-
-        return false;
+        return $status !== self::STATUS_UNKNOW ? $status : sprintf('%s (%s)', $status, $this->getRawStatus());
     }
 
     public function getRawStatus(): ?string

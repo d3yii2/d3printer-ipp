@@ -78,7 +78,7 @@ class PrinterManager
         foreach ($this->printers as $slug => $printer) {
             try {
                 /**  @var BasePrinter $printer */
-                $results[$slug] = $printer->printJob($document, $options);
+                $results[$slug] = $printer->getJobs()->print($document, $options);
                 $results[$slug]['success'] = true;
             } catch (\Exception $e) {
                 $results[$slug] = [

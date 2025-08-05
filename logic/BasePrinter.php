@@ -26,16 +26,11 @@ abstract class BasePrinter implements PrinterInterface
     protected ?PrinterSpooler $spooler = null;
     protected ?PrinterHealth $health = null;
     protected IppPrinterClient $client;
+    protected ?PrinterJobs $jobs;
 
     protected ?string $lastError = null;
     protected ?string $printUri = null;
     protected ?IPPPayload $responsePayload = null;
-
-    protected const JOB_ID = 'job-id';
-    protected const JOB_STATE = 'job-state';
-    protected const JOB_STATE_MESSAGE = 'job-state-message';
-    protected const JOB_STATE_REASONS = 'job-state-reasons';
-    protected const JOB_URI = 'job-uri';
 
     public function __construct(PrinterConfig $config)
     {
@@ -63,6 +58,10 @@ abstract class BasePrinter implements PrinterInterface
         return $this->health;
     }
 
+    public function getJobs(): PrinterJobs
+    {
+        return $this->jobs;
+    }
 
     protected function init(): void
     {
@@ -76,6 +75,7 @@ abstract class BasePrinter implements PrinterInterface
         $this->daemon = new PrinterDaemon($this->config);
         $this->spooler = new PrinterSpooler($this->config);
         $this->health = new PrinterHealth($this->config, new AlertConfig($this->config), $this->printerAttributes);
+        $this->jobs = new PrinterJobs($this->config, $this->client);
     }
 
     protected function getClient(): IppPrinterClient
@@ -114,11 +114,9 @@ abstract class BasePrinter implements PrinterInterface
 
     public function getPrinterOutputTray(): string
     {
-
         $try = $this->printerAttributes->getPrinterOutputTray();
 
         return $try->getAttributeValue(); //->decode($tryAttributeValues);
-
     }
 
     public function getSuppliesStatus(): array
@@ -168,7 +166,6 @@ abstract class BasePrinter implements PrinterInterface
         $printerLocation = $this->printerAttributes->getPrinterLocation();
         $deviceUri = $this->printerAttributes->getDeviceUri();
 
-
         return [
             'info' => $printerInfo->getAttributeValue(),
             'model' => $printerMakeAndModel->getAttributeValue(),
@@ -177,77 +174,16 @@ abstract class BasePrinter implements PrinterInterface
         ];
     }
 
-    public function printJob(string $document, array $options = []): array
+    public function resume(int $jobId): IPPPayload
     {
-        $currentLimit = ini_get('max_execution_time');
-        set_time_limit($this->config->getTimeout());
-        $ipp = $this->getClient();
-        usleep(1000000);
-        $tryCounter = 1;
-        while ($tryCounter <= 5) {
-            $requestId = 1;
-            /** @var IPPPayload $response */
-            $response = $ipp->printJob($document, $requestId, $options);
-            if ($response->statusCode->getClass() === 'successful') {
-                set_time_limit($currentLimit);
-
-                $jobAttributes = $response->jobAttributes->attributes ?? [];
-
-                /** @var Attribute $jobId */
-                $jobId = $jobAttributes[self::JOB_ID]->value ?? null;
-
-                /** @var Attribute $jobState */
-                $jobState = $jobAttributes[self::JOB_STATE]->value ?? null;
-
-                /** @var Attribute $jobStateMessage */
-                $jobStateMessage = $jobAttributes[self::JOB_STATE_MESSAGE]->value ?? null;
-
-                /** @var Attribute $jobStateReasons */
-                $jobStateReasons = $jobAttributes[self::JOB_STATE_REASONS]->value ?? null;
-
-                /** @var Attribute $jobUri */
-                $jobUri = $jobAttributes[self::JOB_URI]->value ?? null;
-
-
-                return [
-                    self::JOB_ID => $jobId->getAttributeValue(),
-                    self::JOB_STATE => $jobState->getAttributeValue(),
-                    self::JOB_STATE_MESSAGE => $jobStateMessage->getAttributeValue(),
-                    self::JOB_STATE_REASONS => $jobStateReasons->getAttributeValue(),
-                    self::JOB_URI => $jobUri->getAttributeValue(),
-                ];
-            }
-            $tryCounter++;
-            usleep(1000000);
-        }
-        set_time_limit($currentLimit);
-
-        throw new Exception('Can not print! ' . PHP_EOL . 'response: ' . $response->statusCode);
+        return $this->client->resumePrinter();
     }
 
-    public function getJobs(): array
+    public function pause(int $jobId): IPPPayload
     {
-        $this->client->setOperationId(IPP::GET_JOBS);
-        $this->client->addAttribute('requested-attributes', 'job-id');
-        $this->client->addAttribute('requested-attributes', 'job-name');
-        $this->client->addAttribute('requested-attributes', 'job-state');
-        $this->client->addAttribute('requested-attributes', 'job-state-reasons');
-        
-        $response = $this->client->request();
-        
-        return $jobAttributes ?? [];
+        return $this->client->pausePrinter();
     }
 
-    public function cancelJob(int $jobId): bool
-    {
-        $this->client->setOperationId(IPP::CANCEL_JOB);
-        $this->client->addAttribute('job-id', $jobId);
-        
-        $response = $this->client->request();
-        
-        return isset($response['operation-attributes']['status-code']) &&
-               $response['operation-attributes']['status-code'] === IPP::SUCCESSFUL_OK;
-    }
 
     protected function getSupplyStatus(int $level): string
     {
@@ -258,6 +194,7 @@ abstract class BasePrinter implements PrinterInterface
         if ($level <= 25) return 'medium';
         return 'ok';
     }
+
 
     public function getLastError(): ?string
     {
