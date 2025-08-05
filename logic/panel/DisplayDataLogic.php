@@ -90,7 +90,7 @@ class DisplayDataLogic
         $displayData['cartridge'] = $suppliesStatus['level'];
         $displayData['drum'] = ''; //$suppliesStatus[''];
         $displayData['deviceErrors'] = ''; //$this->deviceHealth->logger->getErrors());
-        $displayData['ftpState'] = ''; //$this->getFTPStatusDisplayValue());
+        //$displayData['ftpState'] = ''; //$this->getFTPStatusDisplayValue());
         $displayData['spool'] = ''; //$this->getSpoolerFilesCount());
         $displayData['daemonStatus'] = ''; //$this->getDaemonStatus());
 
@@ -123,10 +123,10 @@ class DisplayDataLogic
                             'label' => Yii::t('d3printeripp', 'Drum'),
                             'value' => $displayData['drum']
                         ],
-                        [
-                            'label' => Yii::t('d3printeripp', 'FTP status'),
-                            'value' => $displayData['ftpState'],
-                        ],
+//                        [
+//                            'label' => Yii::t('d3printeripp', 'FTP status'),
+//                            'value' => $displayData['ftpState'],
+//                        ],
                         [
                             'label' => Yii::t('d3printeripp', 'Spooler'),
                             'value' => $displayData['spool'],
