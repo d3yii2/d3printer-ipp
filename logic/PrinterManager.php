@@ -3,6 +3,7 @@
 namespace d3yii2\d3printeripp\logic;
 
 use d3yii2\d3printeripp\interfaces\PrinterInterface;
+use yii\base\Exception;
 
 /**
  * Main Printer Manager class
@@ -10,18 +11,14 @@ use d3yii2\d3printeripp\interfaces\PrinterInterface;
 class PrinterManager
 {
     private $printers = [];
-    private $configs = [];
 
     public function addPrinter(array $config): void
     {
         $printerConfig = new PrinterConfig($config);
-        $this->configs[$config['slug']] = $printerConfig;
+
+        $printer = PrinterFactory::create($printerConfig);
         
-        $printer = PrinterFactory::create(
-            $printerConfig
-        );
-        
-        $this->printers[$printerConfig->getSlug()] = $printer;
+        $this->printers[$config['slug']] = $printer;
     }
 
     public function getPrinter(string $slug): ?PrinterInterface
@@ -34,7 +31,6 @@ class PrinterManager
         if (isset($this->printers[$slug])) {
             $this->printers[$slug]->disconnect();
             unset($this->printers[$slug]);
-            unset($this->configs[$slug]);
         }
     }
 
@@ -43,25 +39,24 @@ class PrinterManager
         return array_keys($this->printers);
     }
 
-    public function getHealthStatus(): array
+    public function getHealthStatusAll(): array
     {
         $status = [];
         
         foreach ($this->printers as $slug => $printer) {
             try {
-                /** @var BasePrinter $printer */
 
                 $status[$slug] = [
-                    'online' => $printer->isOnline(),
-                    'status' => $printer->getStatus(),
-                    'outputTry' => $printer->getPrinterOutputTray(),
-                    'supplies' => $printer->getSuppliesStatus(),
-                    'system_info' => $printer->getSystemInfo(),
+                    'daemon' => $printer->getData(PrinterData::DATA_DAEMON),
+                    'system' => $printer->getData(PrinterData::DATA_SYSTEM),
+                    'ftp' => $printer->getData(PrinterData::DATA_FTP),
+                    'spooler' => $printer->getData(PrinterData::DATA_SPOOLER),
+                    'supplies' => $printer->getData(PrinterData::DATA_SUPPLIES),
                     'last_check' => date('Y-m-d H:i:s')
                 ];
             } catch (\Exception $e) {
                 $status[$slug] = [
-                    'online' => false,
+                    'alive' => false,
                     'error' => $e->getMessage(),
                     'last_check' => date('Y-m-d H:i:s')
                 ];
@@ -71,10 +66,64 @@ class PrinterManager
         return $status;
     }
 
+    public function getHealthStatus(string $printerSlug): array
+    {
+        $status = [];
+
+        if (empty($this->printers[$printerSlug])) {
+            throw new Exception('Printer: ' . $printerSlug . ' is not set');
+        }
+
+        try {
+
+            /** @var BasePrinter $printer */
+            $printer = $this->printers[$printerSlug];
+
+            $status = [
+                'name' => $printer->getConfig()->getName(),
+                'daemon' => $printer->getData(PrinterData::DATA_DAEMON),
+                'system' => $printer->getData(PrinterData::DATA_SYSTEM),
+                'ftp' => $printer->getData(PrinterData::DATA_FTP),
+                'spooler' => $printer->getData(PrinterData::DATA_SPOOLER),
+                'supplies' => $printer->getData(PrinterData::DATA_SUPPLIES),
+                'last_check' => date('Y-m-d H:i:s')
+            ];
+        } catch (\Exception $e) {
+            $status = [
+                'alive' => false,
+                'error' => $e->getMessage(),
+                'last_check' => date('Y-m-d H:i:s')
+            ];
+        }
+
+        return $status;
+    }
+
+    public function print(string $printerSlug, string $document, array $options = []): array
+    {
+        $printer = $this->printers[$printerSlug] ?? null;
+
+        /**  @var BasePrinter $printer */
+        if ( !$printer instanceof PrinterInterface ) {
+            throw new Exception('Printer: ' . $printerSlug . ' is not set');
+        }
+
+        $result = ['slug' => $printerSlug];
+
+        try {
+            $result['response'] = $printer->getJobs()->print($document, $options);
+            $result['success'] = true;
+        } catch (\Exception $e) {
+            $result['error'] = $e->getMessage();
+        }
+
+        return $result;
+    }
+
     public function printToAll(string $document, array $options = []): array
     {
         $results = [];
-        
+
         foreach ($this->printers as $slug => $printer) {
             try {
                 /**  @var BasePrinter $printer */
@@ -87,7 +136,7 @@ class PrinterManager
                 ];
             }
         }
-        
+
         return $results;
     }
 }

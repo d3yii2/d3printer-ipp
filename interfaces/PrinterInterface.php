@@ -9,7 +9,4 @@ use obray\ipp\enums\PrinterState;
  */
 interface PrinterInterface
 {
-    public function getSuppliesStatus(): array;
-    public function getSystemInfo(): array;
-    public function isOnline(): bool;
 }

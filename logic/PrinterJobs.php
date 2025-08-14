@@ -4,7 +4,6 @@
 namespace d3yii2\d3printeripp\logic;
 
 
-use d3system\helpers\D3FileHelper;
 use d3yii2\d3printeripp\logic\PrinterConfig;
 use obray\ipp\Attribute;
 use obray\ipp\Printer as IppPrinterClient;
@@ -40,7 +39,8 @@ class PrinterJobs
     public function print(string $document, array $options = []): array
     {
         $currentLimit = ini_get('max_execution_time');
-        set_time_limit($this->config->getTimeout());
+        set_time_limit($this->printerConfig->getTimeout());
+        set_time_limit(60);
         usleep(1000000);
         $tryCounter = 1;
         while ($tryCounter <= 5) {
@@ -66,7 +66,6 @@ class PrinterJobs
 
                 /** @var Attribute $jobUri */
                 $jobUri = $jobAttributes[self::JOB_URI]->value ?? null;
-
 
                 return [
                     self::JOB_ID => $jobId->getAttributeValue(),

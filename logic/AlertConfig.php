@@ -56,7 +56,7 @@ class AlertConfig
         $this->emailTemplate = $alertSetttings['emailTemplate'] ?? 'This is alert about the Printer %s ';
     }
 
-    public function getPaperSize(): string
+    public function getDocumentSize(): string
     {
         return $this->paperSize;
     }

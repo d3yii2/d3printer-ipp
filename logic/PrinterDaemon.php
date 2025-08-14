@@ -2,13 +2,14 @@
 
 namespace d3yii2\d3printeripp\logic;
 
+use d3yii2\d3printeripp\interfaces\StatusDataInterface;
 use yii\base\Exception;
 
 /**
  * Class PrinterDaemon
  * @package d3yii2\d3printeripp\logic
  */
-class PrinterDaemon
+class PrinterDaemon implements StatusDataInterface
 {
     private PrinterConfig $printerConfig;
 
@@ -22,6 +23,13 @@ class PrinterDaemon
     public function __construct(PrinterConfig $printerConfig)
     {
         $this->printerConfig = $printerConfig;
+    }
+
+    public function buildStats() : array
+    {
+        return [
+            'status' => $this->getStatus(),
+        ];
     }
 
     public function getStatus(): string

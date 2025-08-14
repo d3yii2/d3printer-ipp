@@ -9,6 +9,8 @@ use d3yii2\d3printeripp\interfaces\PrinterInterface;
  */
 class HPPrinter extends BasePrinter implements PrinterInterface
 {
+    public const SLUG = 'hpPrinter';
+
     public function getSuppliesStatus(): array
     {
         // HP-specific supply status implementation

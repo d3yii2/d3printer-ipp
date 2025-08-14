@@ -99,18 +99,26 @@ class PrinterManagerComponent extends Component
     /**
      * Get health status with caching
      */
-    public function getHealthStatus(bool $forceRefresh = false): array
+    public function getHealthStatus(string $printerSlug, bool $forceRefresh = false): array
     {
         $now = time();
         
         if ($forceRefresh || 
             ($now - $this->lastHealthCheckTime) > $this->healthCheckInterval) {
             
-            $this->lastHealthCheck = $this->printerManager->getHealthStatus();
+            $this->lastHealthCheck = $this->printerManager->getHealthStatus($printerSlug);
             $this->lastHealthCheckTime = $now;
         }
         
         return $this->lastHealthCheck;
+    }
+
+    /**
+     * Print document in specified printer
+     */
+    public function print(string $slug, string $document, array $options = []): array
+    {
+        return $this->printerManager->print($slug, $document, $options);
     }
 
     /**

@@ -16,9 +16,12 @@ class PrinterConfig
     private ?string $password = null;
     private ?string $pincode = null;
     private bool $encryption = false;
+    private int $cacheExpire;
     private int $timeout;
     private string $printerType;
+    private array $jobAttributes;
     private array $additionalSettings;
+    private array $curlOptions;
 
     public function __construct(array $config)
     {
@@ -31,9 +34,12 @@ class PrinterConfig
         $this->password = $config['password'] ?? null;
         $this->pincode = $config['pincode'] ?? null;
         $this->encryption = $config['encryption'] ?? false;
-        $this->timeout = $config['timeout'] ?? 20;
+        $this->timeout = $config['timeout'] ?? 6000;
+        $this->cacheExpire = $config['cacheExpire'] ?? 0;
         $this->printerType = $config['type'] ?? 'generic';
         $this->alertSettings = $config['alertSettings'] ?? [];
+        $this->jobAttributes = $config['jobAttributes'] ?? [];
+        $this->curlOptions = $config['curlOptions'] ?? [];
         $this->additionalSettings = $config['additional'] ?? [];
     }
 
@@ -48,8 +54,11 @@ class PrinterConfig
     public function getPincode(): ?string { return $this->pincode; }
     public function getEncryption(): bool { return $this->encryption; }
     public function getTimeout(): int { return $this->timeout; }
+    public function getCacheExpire(): int { return $this->cacheExpire; }
     public function getPrinterType(): string { return $this->printerType; }
     public function getAlertSettings(): array { return $this->alertSettings; }
+    public function getjobAttributes(): array { return $this->jobAttributes; }
+    public function getCurlOptions(): array { return $this->curlOptions; }
     public function getAdditionalSettings(): array { return $this->additionalSettings; }
     public function getUri(): string
     {

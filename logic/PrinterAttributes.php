@@ -12,6 +12,7 @@ use obray\ipp\transport\IPPPayload;
 use yii\base\Exception;
 use d3yii2\d3printeripp\logic\Request;
 use obray\ipp\PrinterAttributes as IPPPrinterAttributes;
+use d3yii2\d3printeripp\types\PrinterAttributes as PrinterAttributeType;
 
 /**
  * Get Printer attributes
@@ -25,13 +26,12 @@ class PrinterAttributes
     public function __construct(PrinterConfig $config)
     {
         $this->printerConfig = $config;
-        $this->attributes = $this->getAll();
     }
 
     /**
      * @return IPPPrinterAttributes
      */
-    protected function getAll(): IPPPrinterAttributes
+    public function getAll(): IPPPrinterAttributes
     {
         if ($this->attributes) {
             return $this->attributes;
@@ -51,13 +51,23 @@ class PrinterAttributes
     }
 
     /**
+    * @param string $key
+    * @return Attribute
+     */
+    public function getAttribute(string $key): Attribute
+    {
+        return $this->attributes->{$key};
+    }
+
+    /**
      * @param string $key
      * @return mixed
      * @throws Exception
      */
-    public function getAttribute(string $key)
+    public function getAttributeValue(string $key)
     {
-        return $this->attributes->{$key};
+        $attribute = $this->getAttribute($key);
+        return $attribute->getAttributeValue();
     }
 
     /**
@@ -66,7 +76,7 @@ class PrinterAttributes
      */
     public function getPrinterState(): Attribute
     {
-        return $this->getAttribute('printer-state');
+        return $this->getAttributeValue(PrinterAttributeType::PRINTER_STATE);
     }
 
     /**
@@ -75,7 +85,7 @@ class PrinterAttributes
      */
     public function getPrinterOutputTray(): Attribute
     {
-        return $this->getAttribute('printer-output-tray');
+        return $this->getAttributeValue(PrinterAttributeType::PRINTER_OUTPUT_TRAY);
     }
 
     /**
@@ -84,7 +94,7 @@ class PrinterAttributes
      */
     public function getMarkerLevels(): Attribute
     {
-        return $this->getAttribute('marker-levels');
+        return $this->getAttributeValue('marker-levels');
     }
 
     /**
@@ -93,7 +103,7 @@ class PrinterAttributes
      */
     public function getMarkerColors(): Attribute
     {
-        return $this->getAttribute('marker-colors');
+        return $this->getAttributeValue('marker-colors');
     }
 
     /**
@@ -102,7 +112,7 @@ class PrinterAttributes
      */
     public function getMarkerNames(): Attribute
     {
-        return $this->getAttribute('marker-names');
+        return $this->getAttributeValue('marker-names');
     }
 
     /**
@@ -111,7 +121,7 @@ class PrinterAttributes
      */
     public function getMarkerTypes(): Attribute
     {
-        return $this->getAttribute('marker-types');
+        return $this->getAttributeValue('marker-types');
     }
 
     /**
@@ -120,7 +130,7 @@ class PrinterAttributes
      */
     public function getPrinterInfo(): Attribute
     {
-        return $this->getAttribute('printer-info');
+        return $this->getAttributeValue('printer-info');
     }
 
     /**
@@ -129,7 +139,7 @@ class PrinterAttributes
      */
     public function getPrinterMakeAndModel(): Attribute
     {
-        return $this->getAttribute('printer-make-and-model');
+        return $this->getAttributeValue('printer-make-and-model');
     }
 
     /**
@@ -138,7 +148,7 @@ class PrinterAttributes
      */
     public function getPrinterLocation(): Attribute
     {
-        return $this->getAttribute('printer-location');
+        return $this->getAttributeValue('printer-location');
     }
 
 
@@ -146,10 +156,9 @@ class PrinterAttributes
      * @return Attribute
      * @throws Exception
      */
-    public function getPaperSize(): Attribute
+    public function getDocumentSize(): Attribute
     {
-        //@TODO
-        return $this->getAttribute('');
+        return $this->getAttributeValue(\d3yii2\d3printeripp\types\PrinterAttributes::MEDIA_SIZE);
     }
 
     /**
@@ -158,8 +167,7 @@ class PrinterAttributes
      */
     public function getPrintOrientation(): Attribute
     {
-        //@TODO
-        return $this->getAttribute('');
+        return $this->getAttributeValue(\d3yii2\d3printeripp\types\PrinterAttributes::ORIENTATION_REQUESTED);
     }
 
     /**
@@ -169,7 +177,7 @@ class PrinterAttributes
     public function getDrumLevel(): Attribute
     {
         //@TODO
-        return $this->getAttribute('');
+        return $this->getAttributeValue('');
     }
 
     /**
@@ -178,7 +186,7 @@ class PrinterAttributes
      */
     public function getDeviceUri(): Attribute
     {
-        return $this->getAttribute('device-uri');
+        return $this->getAttributeValue('device-uri');
     }
 
 }
