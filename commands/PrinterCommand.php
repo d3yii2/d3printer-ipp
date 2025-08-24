@@ -3,7 +3,7 @@
 namespace d3yii2\d3printeripp\commands;
 
 
-use d3yii2\d3printeripp\components\PrinterManagerComponent;
+use d3yii2\d3printeripp\components\PrinterIPPComponent;
 use d3yii2\d3printeripp\types\PrinterAttributes;
 use d3yii2\d3printeripp\logic\printers\HPPrinter;
 use d3yii2\d3printeripp\types\PrinterAttributeValues;
@@ -15,7 +15,7 @@ use Yii;
  */
 class PrinterCommand extends \yii\console\Controller
 {
-    private PrinterManagerComponent $printerManager;
+    private PrinterIPPComponent $printerManager;
 
     public function init()
     {
@@ -27,25 +27,32 @@ class PrinterCommand extends \yii\console\Controller
      */
     public function actionHealthAll()
     {
-        $health = $this->printerManager->getHealthStatus(true); // Force refresh
-        
-        foreach ($health as $printerName => $status) {
-            print_r($status);
-            $this->stdout("Printer: {$printerName}\n");
-            $this->stdout("Online: " . ($status['online'] ? 'Yes' : 'No') . "\n");
-            
-            if (isset($status['supplies'])) {
-                $this->stdout("Supplies:\n");
-                foreach ($status['supplies'] as $supply) {
-                    $this->stdout("  - {$supply['name']}: {$supply['level']}% ({$supply['status']})\n");
+        try {
+            $health = $this->printerManager->getStatusAll(true); // Force refresh
+
+            foreach ($health as $printerName => $status) {
+                print_r($status);
+                $this->stdout("Printer: {$printerName}\n");
+                $this->stdout("Online: " . ( $status['system']['alive'] === 1  ? 'Yes' :  'No' ) . "\n");
+
+                if (isset($status['supplies'])) {
+                    $this->stdout("Supplies:\n");
+                    foreach ($status['supplies'] as $supply) {
+                        //@TODO
+                        //$this->stdout("  - {$supply['name']}: {$supply['level']}% ({$supply['status']})\n");
+                    }
                 }
+
+                if (isset($status['error'])) {
+                    $this->stdout("Error: {$status['error']}\n");
+                }
+
+                $this->stdout("\n");
             }
-            
-            if (isset($status['error'])) {
-                $this->stdout("Error: {$status['error']}\n");
-            }
-            
-            $this->stdout("\n");
+        } catch (Exception $e) {
+            Yii::error($e->getTraceAsString());
+            $this->stdout("Unexpected error \n");
+
         }
     }
 
@@ -85,12 +92,12 @@ class PrinterCommand extends \yii\console\Controller
         
         $options = [
             PrinterAttributes::JOB_NAME => 'Test Print Command',
-            //PrinterAttributes::COPIES => 1,
+            PrinterAttributes::COPIES => 2,
             //PrinterAttributes::ORIENTATION_REQUESTED => PrinterAttributeValues::ORIENTATION_LANDSCAPE,
-            //PrinterAttributes::MEDIA => PrinterAttributeValues::MEDIA_SIZE_A4,
+           // PrinterAttributes::MEDIA => PrinterAttributeValues::MEDIA_SIZE_A4,
             // Alternative approaches:
             // 'media-size' => ['x-dimension' => 21000, 'y-dimension' => 29700], // micrometers
-            // 'media-size-name' => 'iso_a4_210x297mm',
+            'media-size-name' => 'iso_a4_210x297mm',
         ];
 
         $printer = isset($this->printerManager->printers[$slug]);

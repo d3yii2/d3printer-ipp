@@ -74,7 +74,7 @@ class PrinterAttributes
      * @return Attribute
      * @throws Exception
      */
-    public function getPrinterState(): Attribute
+    public function getPrinterState(): string
     {
         return $this->getAttributeValue(PrinterAttributeType::PRINTER_STATE);
     }
@@ -83,7 +83,7 @@ class PrinterAttributes
      * @return Attribute
      * @throws Exception
      */
-    public function getPrinterOutputTray(): Attribute
+    public function getPrinterOutputTray(): string
     {
         return $this->getAttributeValue(PrinterAttributeType::PRINTER_OUTPUT_TRAY);
     }
@@ -92,7 +92,7 @@ class PrinterAttributes
      * @return Attribute
      * @throws Exception
      */
-    public function getMarkerLevels(): Attribute
+    public function getMarkerLevels(): string
     {
         return $this->getAttributeValue('marker-levels');
     }
@@ -101,7 +101,7 @@ class PrinterAttributes
      * @return Attribute
      * @throws Exception
      */
-    public function getMarkerColors(): Attribute
+    public function getMarkerColors(): string
     {
         return $this->getAttributeValue('marker-colors');
     }
@@ -110,7 +110,7 @@ class PrinterAttributes
      * @return Attribute
      * @throws Exception
      */
-    public function getMarkerNames(): Attribute
+    public function getMarkerNames(): string
     {
         return $this->getAttributeValue('marker-names');
     }
@@ -119,7 +119,7 @@ class PrinterAttributes
      * @return Attribute
      * @throws Exception
      */
-    public function getMarkerTypes(): Attribute
+    public function getMarkerTypes(): string
     {
         return $this->getAttributeValue('marker-types');
     }
@@ -128,7 +128,7 @@ class PrinterAttributes
      * @return Attribute
      * @throws Exception
      */
-    public function getPrinterInfo(): Attribute
+    public function getPrinterInfo(): string
     {
         return $this->getAttributeValue('printer-info');
     }
@@ -137,7 +137,7 @@ class PrinterAttributes
      * @return Attribute
      * @throws Exception
      */
-    public function getPrinterMakeAndModel(): Attribute
+    public function getPrinterMakeAndModel(): string
     {
         return $this->getAttributeValue('printer-make-and-model');
     }
@@ -146,7 +146,7 @@ class PrinterAttributes
      * @return Attribute
      * @throws Exception
      */
-    public function getPrinterLocation(): Attribute
+    public function getPrinterLocation(): string
     {
         return $this->getAttributeValue('printer-location');
     }
@@ -156,16 +156,17 @@ class PrinterAttributes
      * @return Attribute
      * @throws Exception
      */
-    public function getDocumentSize(): Attribute
+    public function getDocumentSize(): string
     {
-        return $this->getAttributeValue(\d3yii2\d3printeripp\types\PrinterAttributes::MEDIA_SIZE);
+        //@TODO  - atributs nepareizs
+        return '???'; // $this->getAttributeValue(\d3yii2\d3printeripp\types\PrinterAttributes::MEDIA_SIZE);
     }
 
     /**
      * @return Attribute
      * @throws Exception
      */
-    public function getPrintOrientation(): Attribute
+    public function getPrintOrientation(): string
     {
         return $this->getAttributeValue(\d3yii2\d3printeripp\types\PrinterAttributes::ORIENTATION_REQUESTED);
     }
@@ -174,19 +175,9 @@ class PrinterAttributes
      * @return Attribute
      * @throws Exception
      */
-    public function getDrumLevel(): Attribute
+    public function getDrumLevel(): string
     {
         //@TODO
         return $this->getAttributeValue('');
     }
-
-    /**
-     * @return Attribute
-     * @throws Exception
-     */
-    public function getDeviceUri(): Attribute
-    {
-        return $this->getAttributeValue('device-uri');
-    }
-
 }

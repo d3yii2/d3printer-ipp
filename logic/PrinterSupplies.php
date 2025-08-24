@@ -6,13 +6,13 @@ use d3yii2\d3printeripp\logic\AlertConfig;
 use d3yii2\d3printeripp\logic\PrinterAttributes;
 use d3yii2\d3printeripp\logic\PrinterConfig;
 use yii\base\Exception;
-use d3yii2\d3printeripp\interfaces\StatusDataInterface;
+use d3yii2\d3printeripp\interfaces\StatusInterface;
 
 /**
  * Class PrinterHealth
  * @package d3yii2\d3printeripp\logic
  */
-class PrinterSupplies implements StatusDataInterface
+class PrinterSupplies implements StatusInterface
 {
 
     protected PrinterConfig $printerConfig;
@@ -26,29 +26,19 @@ class PrinterSupplies implements StatusDataInterface
         $this->printerAttributes = $printerAttributes;
     }
 
-    public function buildStats(): array
+    public function getStatus(): array
     {
-        /** @var PrinterAttributes $attributes */
-        $attributes = $this->printerAttributes->getAll();
 
-        $markerLevels = $attributes->getMarkerLevels();
-        $markerColors = $attributes->getMarkerColors();
-        $markerNames = $attributes->getMarkerNames();
-        $markerTypes = $attributes->getMarkerTypes();
-
-        $nameValue = $markerNames->getAttributeValue();
-        $levelValue = $markerLevels->getAttributeValue();
-        $colorValue = $markerColors->getAttributeValue();
-        $nameValue = $markerNames->getAttributeValue();
-        $typeValue = $markerTypes->getAttributeValue();
-
+        $markerLevel = $this->printerAttributes->getMarkerLevels();
+        $markerColor = $this->printerAttributes->getMarkerColors();
+        $markerName = $this->printerAttributes->getMarkerNames();
+        $markerType = $this->printerAttributes->getMarkerTypes();
         $supplies = [
-            'name' => $nameValue ?? 'Unknown',
-            'level' => $levelValue ?? -1,
-            'color' => $colorValue ?? null,
-            'type' => $typeValue ?? null,
-            'status' => $this->getSupplyStatus($levelValue ?? -1),
-            'documentSize' => $attributes->getDocumentSize()
+            'name' => $markerName  ?? 'Unknown',
+            'color' => $markerColor ?? null,
+            'type' => $markerType ?? null,
+            'level' => $this->getSupplyStatus((int) $markerLevel  ?? -1),
+            'documentSize' => $this->printerAttributes->getDocumentSize()
         ];
 
         return $supplies;
@@ -110,7 +100,7 @@ class PrinterSupplies implements StatusDataInterface
         if ($level === -3) return 'unknown';
         if ($level <= 10) return 'low';
         if ($level <= 25) return 'medium';
-        return 'ok';
+        return 'ok (' . $level .  ')';
     }
 
 }

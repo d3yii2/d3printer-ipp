@@ -3,65 +3,53 @@
 namespace d3yii2\d3printeripp\logic\cache;
 
 use d3yii2\d3printeripp\logic\PrinterConfig;
+use yii\caching\Cache;
+use Yii;
 
 class PrinterCache
 {
-    private array $health = [];
-    private array $daemon = [];
-    private array $jobs = [];
-    private array $spooler = [];
     private int $cacheExpire;
 
     private PrinterConfig $config;
 
+    private Cache  $cache;
+
+    public const LAST_CHECKED_TIMESTAMP = 'lastCheckedDatetime';
+
     public function __construct(PrinterConfig $config)
     {
         $this->config = $config;
-        $this->cacheExpire = $this->config->getCacheExpire() ?? 30;
+        $this->cache = Yii::$app->cache;
+        $this->cacheExpire = $this->config->getCacheDuration() ?? 30;
     }
 
-    public function getHealth()
+    public function getLastCheckedTimestamp()
     {
-        return $this->health;
+        return $this->getData(self::LAST_CHECKED_TIMESTAMP);
     }
 
-    public function getDaemon()
+    public function getData(string $type)
     {
-        return $this->daemon;
+        $data = $this->cache->get($this->getCacheKey());
+
+        return $data[$type] ?? null;
     }
 
-    public function getJobs()
+    public function update(array $data)
     {
-        return $this->jobs;
-    }
+        //@TODO - use configured format from Yii date formater
+        $data['updated_at']  = date('d.m.Y H:i:s');
 
-    public function getSpooler()
-    {
-        return $this->spooler;
-    }
-
-    public function setHealth(array $data)
-    {
-        $this->health = $data;
-    }
-
-    public function setDaemon(array $data)
-    {
-        $this->daemon = $data;
-    }
-
-    public function setJobs(array $data)
-    {
-        $this->jobs = $data;
-    }
-
-    public function setSpooler(array $data)
-    {
-        $this->spooler = $data;
+        $this->cache->set($this->getCacheKey(), $data);
     }
 
     public function getCacheExpire()
     {
         return $this->cacheExpire;
+    }
+
+    private function getCacheKey()
+    {
+        return 'printerCache_' . $this->config->getSlug();
     }
 }

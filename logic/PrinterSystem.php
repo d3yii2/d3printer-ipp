@@ -2,7 +2,7 @@
 
 namespace d3yii2\d3printeripp\logic;
 
-use d3yii2\d3printeripp\interfaces\StatusDataInterface;
+use d3yii2\d3printeripp\interfaces\StatusInterface;
 use d3yii2\d3printeripp\logic\AlertConfig;
 use d3yii2\d3printeripp\logic\PrinterAttributes;
 use d3yii2\d3printeripp\logic\PrinterConfig;
@@ -13,7 +13,7 @@ use yii\base\Exception;
  * Class PrinterHealth
  * @package d3yii2\d3printeripp\logic
  */
-class PrinterSystem implements StatusDataInterface
+class PrinterSystem implements StatusInterface
 {
 
     protected PrinterConfig $printerConfig;
@@ -22,6 +22,12 @@ class PrinterSystem implements StatusDataInterface
 
     protected PrinterAttributes $printerAttributes;
 
+    private array $printerStates = [
+        PrinterState::stopped => 'stopped',
+        PrinterState::idle => 'idle',
+        PrinterState::processing => 'processing',
+    ];
+
     public function __construct(PrinterConfig $printerConfig, AlertConfig $alertConfig, PrinterAttributes $printerAttributes)
     {
         $this->printerConfig = $printerConfig;
@@ -29,32 +35,33 @@ class PrinterSystem implements StatusDataInterface
         $this->printerAttributes = $printerAttributes;
     }
 
-    public function buildStats() : array
+    public function getStatus() : array
     {
-        $attributes = $this->printerAttributes->getAll();
-        $printerInfo = $attributes->getPrinterInfo();
-        $printerMakeAndModel = $attributes->getPrinterMakeAndModel();
-        $printerLocation = $attributes->getPrinterLocation();
-        $deviceUri = $attributes->getDeviceUri();
-        $state = $attributes->getPrinterState();
+        $printerInfo = $this->printerAttributes->getPrinterInfo();
+        $printerMakeAndModel = $this->printerAttributes->getPrinterMakeAndModel();
+        $printerLocation = $this->printerAttributes->getPrinterLocation();
+        $deviceUri = $this->printerConfig->getUri();
+        $state = $this->printerAttributes->getPrinterState();
 
         return [
             'info' => $printerInfo,
             'model' => $printerMakeAndModel,
             'location' => $printerLocation,
             'deviceUri' => $deviceUri,
-            'state' => $state,
-            'alive' => $this->isAlive()
+            'state' => $this->getStateName($state),
+            'alive' => $this->isAlive($state)
         ];
     }
 
-
-    public function isAlive(): bool
+    private function getStateName(string $state)
     {
-        $status = $this->getStatus();
+        return $this->printerStates[$state]  ?? 'unknown';
+    }
 
+    public function isAlive(string $state): bool
+    {
         // idle|processing|stopped
-        return $status !== PrinterState::stopped;
+        return $state !== PrinterState::stopped;
     }
 
     /**

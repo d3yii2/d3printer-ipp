@@ -2,7 +2,12 @@
 
 namespace d3yii2\d3printeripp\components;
 
+use d3yii2\d3printeripp\interfaces\PrinterInterface;
+use d3yii2\d3printeripp\logic\BasePrinter;
+use d3yii2\d3printeripp\logic\PrinterConfig;
+use d3yii2\d3printeripp\logic\PrinterData;
 use yii\base\Component;
+use yii\base\Exception;
 use yii\base\InvalidConfigException;
 use d3yii2\d3printeripp\logic\PrinterManager;
 use d3yii2\d3printeripp\logic\PrinterFactory;
@@ -13,8 +18,8 @@ use d3yii2\d3printeripp\logic\PrinterFactory;
  * Configuration example in config/web.php:
  * 
  * 'components' => [
- *     'printerManager' => [
- *         'class' => 'd3yii2\d3printeripp\components\PrinterManagerComponent',
+ *     'printerIPP' => [
+ *         'class' => 'd3yii2\d3printeripp\components\PrinterIPPComponent',
  *         'printers' => [
  *             'office_hp' => [
  *                 'name' => 'Office HP printer',
@@ -37,96 +42,138 @@ use d3yii2\d3printeripp\logic\PrinterFactory;
  *     ]
  * ]
  */
-class PrinterManagerComponent extends Component
+class PrinterIPPComponent extends Component
 {
     /**
      * @var array Printer configurations
      */
     public $printers = [];
-
-    /**
-     * @var PrinterManager
-     */
-    private $printerManager;
-
-    /**
-     * @var int Health check interval in seconds
-     */
-    public $healthCheckInterval = 300;
-
-    /**
-     * @var array Last health check results
-     */
-    private $lastHealthCheck = [];
-
-    /**
-     * @var int Last health check timestamp
-     */
-    private $lastHealthCheckTime = 0;
+    private $instances = [];
 
     public function init()
     {
         parent::init();
-        
+
         if (empty($this->printers)) {
             throw new InvalidConfigException('At least one printer must be configured.');
         }
-        
-        $this->printerManager = new PrinterManager();
-        
+
         // Add all configured printers
         foreach ($this->printers as $config) {
-            $this->printerManager->addPrinter($config);
+            $this->addPrinter($config);
         }
     }
 
-    /**
-     * Get printer by name
-     */
-    public function getPrinter(string $slug)
+    public function addPrinter(array $config): void
     {
-        return $this->printerManager->getPrinter($slug);
+        $printerConfig = new PrinterConfig($config);
+
+        $printer = PrinterFactory::create($printerConfig);
+
+        $this->instances[$config['slug']] = $printer;
     }
 
-    /**
-     * Get all printer names
-     */
+    public function getPrinter(string $slug): ?PrinterInterface
+    {
+        return $this->instances[$slug] ?? null;
+    }
+
+    public function removePrinter(string $slug): void
+    {
+        if (isset($this->instances[$slug])) {
+            $this->instances[$slug]->disconnect();
+            unset($this->instances[$slug]);
+        }
+    }
+
     public function getAllPrinters(): array
     {
-        return $this->printerManager->getAllPrinters();
+        return array_keys($this->instances);
     }
 
-    /**
-     * Get health status with caching
-     */
-    public function getHealthStatus(string $printerSlug, bool $forceRefresh = false): array
+    public function getStatusAll(): array
     {
-        $now = time();
-        
-        if ($forceRefresh || 
-            ($now - $this->lastHealthCheckTime) > $this->healthCheckInterval) {
-            
-            $this->lastHealthCheck = $this->printerManager->getHealthStatus($printerSlug);
-            $this->lastHealthCheckTime = $now;
+        $status = [];
+
+        foreach ($this->instances as $slug => $printer) {
+            try {
+                $status[$slug] = $this->getStatus($slug);
+            } catch (\Exception $e) {
+                $status[$slug] = [
+                    'alive' => false,
+                    'error' => $e->getMessage(),
+                    'last_check' => date('Y-m-d H:i:s')
+                ];
+            }
         }
-        
-        return $this->lastHealthCheck;
+
+        return $status;
     }
 
-    /**
-     * Print document in specified printer
-     */
-    public function print(string $slug, string $document, array $options = []): array
+    public function getStatus(string $printerSlug): array
     {
-        return $this->printerManager->print($slug, $document, $options);
+        $status = [];
+
+        if (empty($this->instances[$printerSlug])) {
+            throw new Exception('Printer: ' . $printerSlug . ' is not set');
+        }
+
+        try {
+
+            /** @var BasePrinter $printer */
+            $printer = $this->instances[$printerSlug];
+
+            return $printer->getFullStatus();
+        } catch (\Exception $e) {
+            $status = [
+                'alive' => false,
+                'error' => $e->getMessage(),
+                'last_check' => date('Y-m-d H:i:s')
+            ];
+        }
+
+        return $status;
     }
 
-    /**
-     * Print document to all printers
-     */
+    public function print(string $printerSlug, string $document, array $options = []): array
+    {
+        $printer = $this->instances[$printerSlug] ?? null;
+
+        /**  @var BasePrinter $printer */
+        if ( !$printer instanceof PrinterInterface ) {
+            throw new Exception('Printer: ' . $printerSlug . ' is not set');
+        }
+
+        $result = ['slug' => $printerSlug];
+
+        try {
+            $result['response'] = $printer->getJobs()->print($document, $options);
+            $result['success'] = true;
+        } catch (\Exception $e) {
+            $result['error'] = $e->getMessage();
+        }
+
+        return $result;
+    }
+
     public function printToAll(string $document, array $options = []): array
     {
-        return $this->printerManager->printToAll($document, $options);
+        $results = [];
+
+        foreach ($this->instances as $slug => $printer) {
+            try {
+                /**  @var BasePrinter $printer */
+                $results[$slug] = $printer->getJobs()->print($document, $options);
+                $results[$slug]['success'] = true;
+            } catch (\Exception $e) {
+                $results[$slug] = [
+                    'success' => false,
+                    'error' => $e->getMessage()
+                ];
+            }
+        }
+
+        return $results;
     }
 
     /**

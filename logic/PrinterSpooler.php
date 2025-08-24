@@ -5,7 +5,7 @@ namespace d3yii2\d3printeripp\logic;
 
 
 use d3system\helpers\D3FileHelper;
-use d3yii2\d3printeripp\interfaces\StatusDataInterface;
+use d3yii2\d3printeripp\interfaces\StatusInterface;
 use d3yii2\d3printeripp\logic\PrinterConfig;
 use yii\base\Component;
 use yii\base\Exception;
@@ -16,7 +16,7 @@ use yii\base\Exception;
  *
  * Class Printer
  */
-class PrinterSpooler implements StatusDataInterface
+class PrinterSpooler implements StatusInterface
 {
     protected PrinterConfig $printerConfig;
 
@@ -33,7 +33,7 @@ class PrinterSpooler implements StatusDataInterface
     }
 
 
-    public function buildStats() : array
+    public function getStatus() : array
     {
         return [
             'path' => $this->getSpoolDirectory(),

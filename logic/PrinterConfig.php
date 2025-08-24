@@ -16,8 +16,8 @@ class PrinterConfig
     private ?string $password = null;
     private ?string $pincode = null;
     private bool $encryption = false;
-    private int $cacheExpire;
     private int $timeout;
+    private int $cacheDuration;
     private string $printerType;
     private array $jobAttributes;
     private array $additionalSettings;
@@ -35,7 +35,7 @@ class PrinterConfig
         $this->pincode = $config['pincode'] ?? null;
         $this->encryption = $config['encryption'] ?? false;
         $this->timeout = $config['timeout'] ?? 6000;
-        $this->cacheExpire = $config['cacheExpire'] ?? 0;
+        $this->cacheDuration = $config['cacheDuration'] ?? 60;
         $this->printerType = $config['type'] ?? 'generic';
         $this->alertSettings = $config['alertSettings'] ?? [];
         $this->jobAttributes = $config['jobAttributes'] ?? [];
@@ -54,7 +54,7 @@ class PrinterConfig
     public function getPincode(): ?string { return $this->pincode; }
     public function getEncryption(): bool { return $this->encryption; }
     public function getTimeout(): int { return $this->timeout; }
-    public function getCacheExpire(): int { return $this->cacheExpire; }
+    public function getCacheDuration(): int { return $this->cacheDuration; }
     public function getPrinterType(): string { return $this->printerType; }
     public function getAlertSettings(): array { return $this->alertSettings; }
     public function getjobAttributes(): array { return $this->jobAttributes; }

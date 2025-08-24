@@ -68,11 +68,11 @@ class PrinterJobs
                 $jobUri = $jobAttributes[self::JOB_URI]->value ?? null;
 
                 return [
-                    self::JOB_ID => $jobId->getAttributeValue(),
-                    self::JOB_STATE => $jobState->getAttributeValue(),
-                    self::JOB_STATE_MESSAGE => $jobStateMessage->getAttributeValue(),
-                    self::JOB_STATE_REASONS => $jobStateReasons->getAttributeValue(),
-                    self::JOB_URI => $jobUri->getAttributeValue(),
+                    self::JOB_ID => $jobId,
+                    self::JOB_STATE => $jobState,
+                    self::JOB_STATE_MESSAGE => $jobStateMessage,
+                    self::JOB_STATE_REASONS => $jobStateReasons,
+                    self::JOB_URI => $jobUri,
                 ];
             }
             $tryCounter++;

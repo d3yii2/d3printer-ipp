@@ -4,7 +4,7 @@ namespace d3yii2\d3printeripp\logic;
 
 
 use d3yii2\d3printeripp\logic\AlertConfig;
-use d3yii2\d3printeripp\logic\PrinterData;
+use d3yii2\d3printeripp\logic\cache\PrinterCache;
 use d3yii2\d3printeripp\logic\PrinterAttributes;
 use d3yii2\d3printeripp\logic\PrinterHealth;
 use d3yii2\d3printeripp\logic\PrinterSpooler;
@@ -22,13 +22,38 @@ use yii\base\Exception;
 abstract class BasePrinter implements PrinterInterface
 {
     protected PrinterConfig $config;
+
     protected IppPrinterClient $client;
+
+    protected PrinterAttributes $attributes;
+
     protected PrinterJobs $jobs;
-    protected PrinterData $data;
+
+    protected  PrinterDaemon $daemon;
+
+    protected  PrinterSpooler $spooler;
+
+    protected  PrinterSystem $system;
+
+    protected PrinterSupplies $supplies;
+
+    protected PrinterCache $cache;
+
+    protected ?IPPPayload $responsePayload = null;
+
+    protected ?string $lastError = null;
+
+    public const STATUS_HEALTH = 'health';
+    public const STATUS_DAEMON = 'daemon';
+    public const STATUS_SPOOLER = 'spooler';
+    public const STATUS_SYSTEM = 'system';
+    public const STATUS_SUPPLIES = 'supplies';
+    public const STATUS_FTP = 'ftp';
 
     public function __construct(PrinterConfig $config)
     {
         $this->config = $config;
+
         $this->client = new IppPrinterClient(
             $this->config->getUri(),
             $this->config->getUsername(),
@@ -36,9 +61,40 @@ abstract class BasePrinter implements PrinterInterface
             $this->config->getCurlOptions()
         );
 
+        $this->attributes = new PrinterAttributes($this->config);
+
+        $this->system = new PrinterSystem(
+            $this->config,
+            new AlertConfig($this->config),
+            $this->attributes
+        );
+
+        $this->daemon = new PrinterDaemon($this->config);
+
+        $this->spooler = new PrinterSpooler($this->config);
+
+        //@TODO cache this
+        $refreshAttributes = $this->attributes->getAll();
+        $this->supplies = new PrinterSupplies($this->config, $this->attributes);
+
         $this->jobs = new PrinterJobs($this->config, $this->client);
 
-        $this->data = new PrinterData($config, $this->client);
+        $this->cache = new PrinterCache($this->config);
+    }
+
+    public function getDaemon(): PrinterDaemon
+    {
+        return $this->daemon;
+    }
+
+    public function getSpooler(): PrinterSpooler
+    {
+        return $this->spooler;
+    }
+
+    public function getLastError(): ?string
+    {
+        return $this->lastError;
     }
 
     public function getConfig(): PrinterConfig
@@ -61,34 +117,72 @@ abstract class BasePrinter implements PrinterInterface
         return $this->config->getName();
     }
 
-    public function getData(string $type)
-    {
-        return $this->data->{$type};
-    }
-
     public function getFtpStatus()
     {
-        return $this->getData(PrinterData::DATA_FTP);
+        return $this->spooler->existDeadFile() ? 'ok' : 'down';
     }
 
     public function getSpoolerStatus()
     {
-        return $this->getData(PrinterData::DATA_SPOOLER);
+        return $this->getStatus(self::STATUS_SPOOLER);
     }
 
-    public function getHealthStatus()
+    public function updateCache()
     {
-        return $this->getData(PrinterData::DATA_HEALTH);
+        $status = $this->getFullStatus();
+
+        $this->cache->update($status);
+    }
+
+    public function getFullStatus(bool $forceRefresh = false)
+    {
+        $now = time();
+
+        $cachedStats = $this->cache->getData('stats');
+        $lastCheckedTimestamp = $cachedStats['lastChecked'] ?? null;
+
+        if (
+            !$forceRefresh &&  $lastCheckedTimestamp
+            || ($now - $lastCheckedTimestamp) > $this->config->getCacheDuration()
+        ) {
+
+            if (!empty($cachedStats)) {
+                return $cachedStats;
+            }
+        }
+
+        $stats = [
+            'lastChecked' => $now,
+            self::STATUS_DAEMON => $this->getDaemonStatus(),
+            self::STATUS_FTP => $this->getFtpStatus(),
+            self::STATUS_SPOOLER => $this->getSpoolerStatus(),
+            self::STATUS_SUPPLIES => $this->getSuppliesStatus(),
+            self::STATUS_SYSTEM => $this->getSystemStatus()
+        ];
+
+        $this->cache->update(['stats' => $stats]) ;
+
+        return $stats;
+    }
+
+    public function getSystemStatus()
+    {
+        return $this->getStatus(self::STATUS_SYSTEM);
     }
 
     public function getDaemonStatus()
     {
-        return $this->getData(PrinterData::DATA_DAEMON);
+        return $this->getStatus(self::STATUS_DAEMON);
     }
 
     public function getSuppliesStatus()
     {
-        return $this->getData(PrinterData::DATA_SUPPLIES);
+        return $this->getStatus(self::STATUS_SUPPLIES);
+    }
+
+    private function getStatus(string $from)
+    {
+        return $this->{$from}->getStatus();
     }
 
     public function resume(int $jobId): IPPPayload
@@ -100,6 +194,4 @@ abstract class BasePrinter implements PrinterInterface
     {
         return $this->client->pausePrinter();
     }
-
-
 }
