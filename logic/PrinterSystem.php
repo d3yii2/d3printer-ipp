@@ -3,23 +3,17 @@
 namespace d3yii2\d3printeripp\logic;
 
 use d3yii2\d3printeripp\interfaces\StatusInterface;
-use d3yii2\d3printeripp\logic\AlertConfig;
-use d3yii2\d3printeripp\logic\PrinterAttributes;
-use d3yii2\d3printeripp\logic\PrinterConfig;
 use obray\ipp\enums\PrinterState;
 use yii\base\Exception;
 
 /**
- * Class PrinterHealth
+ * Class PrinterSystem
  * @package d3yii2\d3printeripp\logic
  */
 class PrinterSystem implements StatusInterface
 {
-
     protected PrinterConfig $printerConfig;
-
     protected AlertConfig $alertConfig;
-
     protected PrinterAttributes $printerAttributes;
 
     private array $printerStates = [
@@ -35,27 +29,34 @@ class PrinterSystem implements StatusInterface
         $this->printerAttributes = $printerAttributes;
     }
 
-    public function getStatus() : array
+    public function getStatus(): array
     {
-        $printerInfo = $this->printerAttributes->getPrinterInfo();
-        $printerMakeAndModel = $this->printerAttributes->getPrinterMakeAndModel();
-        $printerLocation = $this->printerAttributes->getPrinterLocation();
-        $deviceUri = $this->printerConfig->getUri();
-        $state = $this->printerAttributes->getPrinterState();
+        $printerData = $this->gatherPrinterData();
 
         return [
-            'info' => $printerInfo,
-            'model' => $printerMakeAndModel,
-            'location' => $printerLocation,
-            'deviceUri' => $deviceUri,
-            'state' => $this->getStateName($state),
-            'alive' => $this->isAlive($state)
+            'info' => $printerData['info'],
+            'model' => $printerData['model'],
+            'location' => $printerData['location'],
+            'deviceUri' => $printerData['deviceUri'],
+            'state' => $this->getStateName($printerData['state']),
+            'alive' => $this->isAlive($printerData['state'])
         ];
     }
 
-    private function getStateName(string $state)
+    private function gatherPrinterData(): array
     {
-        return $this->printerStates[$state]  ?? 'unknown';
+        return [
+            'info' => $this->printerAttributes->getPrinterInfo(),
+            'model' => $this->printerAttributes->getPrinterMakeAndModel(),
+            'location' => $this->printerAttributes->getPrinterLocation(),
+            'deviceUri' => $this->printerConfig->getUri(),
+            'state' => $this->printerAttributes->getPrinterState()
+        ];
+    }
+
+    private function getStateName(string $state): string
+    {
+        return $this->printerStates[$state] ?? 'unknown';
     }
 
     public function isAlive(string $state): bool
@@ -63,13 +64,4 @@ class PrinterSystem implements StatusInterface
         // idle|processing|stopped
         return $state !== PrinterState::stopped;
     }
-
-    /**
-     * @return bool
-     * @throws Exception
-     */
-    /*public function energySleepOk(): bool
-    {
-        return $this->alertConfig->getSleepAfter() === $this->printerAttributes->getSleepAfter();
-    }*/
 }

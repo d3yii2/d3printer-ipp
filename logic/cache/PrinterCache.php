@@ -9,18 +9,19 @@ use Yii;
 class PrinterCache
 {
     private int $cacheExpire;
-
     private PrinterConfig $config;
-
-    private Cache  $cache;
+    private Cache $cache;
 
     public const LAST_CHECKED_TIMESTAMP = 'lastCheckedDatetime';
+    private const UPDATED_AT = 'updated_at';
+    private const CACHE_KEY_PREFIX = 'printerCache_';
+    private const DEFAULT_CACHE_DURATION = 30;
 
     public function __construct(PrinterConfig $config)
     {
         $this->config = $config;
         $this->cache = Yii::$app->cache;
-        $this->cacheExpire = $this->config->getCacheDuration() ?? 30;
+        $this->cacheExpire = $this->config->getCacheDuration() ?? self::DEFAULT_CACHE_DURATION;
     }
 
     public function getLastCheckedTimestamp()
@@ -30,26 +31,36 @@ class PrinterCache
 
     public function getData(string $type)
     {
-        $data = $this->cache->get($this->getCacheKey());
-
-        return $data[$type] ?? null;
+        $cacheData = $this->getCacheData();
+        return $cacheData[$type] ?? null;
     }
 
     public function update(array $data)
     {
-        //@TODO - use configured format from Yii date formater
-        $data['updated_at']  = date('d.m.Y H:i:s');
-
-        $this->cache->set($this->getCacheKey(), $data);
+        $enrichedData = $this->enrichDataWithTimestamp($data);
+        $this->cache->set($this->getCacheKey(), $enrichedData, $this->cacheExpire);
     }
 
-    public function getCacheExpire()
+    public function getCacheExpire(): int
     {
         return $this->cacheExpire;
     }
 
-    private function getCacheKey()
+    private function getCacheKey(): string
     {
-        return 'printerCache_' . $this->config->getSlug();
+        return self::CACHE_KEY_PREFIX . $this->config->getSlug();
+    }
+
+    private function getCacheData(): array
+    {
+        $data = $this->cache->get($this->getCacheKey());
+        return is_array($data) ? $data : [];
+    }
+
+    private function enrichDataWithTimestamp(array $data): array
+    {
+        //@TODO - use configured format from Yii date formatter
+        $data[self::UPDATED_AT] = date('d.m.Y H:i:s');
+        return $data;
     }
 }

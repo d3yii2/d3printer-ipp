@@ -16,16 +16,16 @@ class PrinterDaemon implements StatusInterface
     public const STATUS_ACTIVE = 'active';
     public const STATUS_INACTIVE = 'inactive';
     public const STATUS_FAILED = 'failed';
-    public const STATUS_UNKNOW = 'unknow';
+    public const STATUS_UNKNOWN = 'unknown';
 
-    private $rawStatus;
+    private ?string $rawStatus = null;
 
     public function __construct(PrinterConfig $printerConfig)
     {
         $this->printerConfig = $printerConfig;
     }
 
-    public function getStatus() : array
+    public function getStatus(): array
     {
         return [
             'status' => $this->getState(),
@@ -34,11 +34,26 @@ class PrinterDaemon implements StatusInterface
 
     public function getState(): string
     {
-//        return self::STATUS_ACTIVE;
         $command = sprintf('systemctl status %s', $this->printerConfig->getDaemonName());
+        $output = $this->executeCommand($command);
+
+        return $this->parseStatusFromOutput($output);
+    }
+
+    private function executeCommand(string $command): ?string
+    {
         $output = shell_exec($command);
         $this->rawStatus = $output;
-        $status = '-';
+
+        return $output;
+    }
+
+    private function parseStatusFromOutput(?string $output): string
+    {
+        if ($output === null) {
+            return self::STATUS_UNKNOWN;
+        }
+
         if (preg_match('/Active:\s+(.*?)\s+\(/', $output, $matches)) {
             $status = $matches[1];
             if (in_array($status, [
@@ -47,32 +62,17 @@ class PrinterDaemon implements StatusInterface
                 self::STATUS_FAILED,
             ])) {
                 return $status;
-            };
+            }
         }
 
-        /*throw new Exception(
-            sprintf(
-                'Cannot parse daemon status value: %s. Printer: %s (%s). Daemon name: "%s". Command: "%s"',
-                $status,
-                $this->printerConfig->getName(),
-                $this->printerConfig->getSlug(),
-                $this->printerConfig->getDaemonName(),
-                $command
-            )
-        );*/
-
-        return self::STATUS_UNKNOW;
+        return self::STATUS_UNKNOWN;
     }
 
     public function statusOk(): bool
     {
-        if ($this->getStatus() === self::STATUS_ACTIVE) {
-            return true;
-        }
+        $currentStatus = $this->getState();
 
-        $status = $this->getStatus();
-
-        return $status !== self::STATUS_UNKNOW ? $status : sprintf('%s (%s)', $status, $this->getRawStatus());
+        return $currentStatus === self::STATUS_ACTIVE;
     }
 
     public function getRawStatus(): ?string

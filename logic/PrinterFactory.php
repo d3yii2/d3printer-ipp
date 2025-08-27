@@ -19,26 +19,36 @@ class PrinterFactory
     public static function create(PrinterConfig $config): PrinterInterface
     {
         $printerType = $config->getPrinterType();
-        $className = self::$printerTypes[$printerType] ?? self::$printerTypes['generic'];
-        
-        if (!class_exists($className)) {
-            throw new \InvalidArgumentException("Printer type '{$printerType}' is not supported");
+
+        if (!array_key_exists($printerType, self::$printerTypes)) {
+            throw new \InvalidArgumentException("Printer type '{$printerType}' is not supported. Supported types: " . implode(', ', self::getSupportedTypes()));
         }
-        
+
+        $className = self::$printerTypes[$printerType];
+        self::validatePrinterClass($className, $printerType);
+
         return new $className($config);
     }
 
     public static function registerPrinterType(string $type, string $className): void
     {
-        if (!is_subclass_of($className, PrinterInterface::class)) {
-            throw new \InvalidArgumentException("Class must implement PrinterInterface");
-        }
-        
+        self::validatePrinterClass($className, $type);
         self::$printerTypes[$type] = $className;
     }
 
     public static function getSupportedTypes(): array
     {
         return array_keys(self::$printerTypes);
+    }
+
+    private static function validatePrinterClass(string $className, string $printerType): void
+    {
+        if (!class_exists($className)) {
+            throw new \InvalidArgumentException("Printer class '{$className}' for type '{$printerType}' does not exist");
+        }
+
+        if (!is_subclass_of($className, PrinterInterface::class)) {
+            throw new \InvalidArgumentException("Printer class '{$className}' for type '{$printerType}' must implement PrinterInterface");
+        }
     }
 }

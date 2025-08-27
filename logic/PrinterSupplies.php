@@ -1,3 +1,4 @@
+
 <?php
 
 namespace d3yii2\d3printeripp\logic;
@@ -9,39 +10,49 @@ use yii\base\Exception;
 use d3yii2\d3printeripp\interfaces\StatusInterface;
 
 /**
- * Class PrinterHealth
+ * Class PrinterSupplies
  * @package d3yii2\d3printeripp\logic
  */
 class PrinterSupplies implements StatusInterface
 {
+    private const LEVEL_UNKNOWN_1 = -1;
+    private const LEVEL_UNKNOWN_2 = -2;
+    private const LEVEL_UNKNOWN_3 = -3;
+    private const LEVEL_LOW_THRESHOLD = 10;
+    private const LEVEL_MEDIUM_THRESHOLD = 25;
+
+    private const STATUS_UNKNOWN = 'unknown';
+    private const STATUS_LOW = 'low';
+    private const STATUS_MEDIUM = 'medium';
 
     protected PrinterConfig $printerConfig;
-
-
     protected PrinterAttributes $printerAttributes;
+    protected AlertConfig $alertConfig;
 
-    public function __construct(PrinterConfig $printerConfig, PrinterAttributes $printerAttributes)
-    {
+    public function __construct(
+        PrinterConfig $printerConfig,
+        PrinterAttributes $printerAttributes,
+        AlertConfig $alertConfig
+    ) {
         $this->printerConfig = $printerConfig;
         $this->printerAttributes = $printerAttributes;
+        $this->alertConfig = $alertConfig;
     }
 
     public function getStatus(): array
     {
-
         $markerLevel = $this->printerAttributes->getMarkerLevels();
         $markerColor = $this->printerAttributes->getMarkerColors();
         $markerName = $this->printerAttributes->getMarkerNames();
         $markerType = $this->printerAttributes->getMarkerTypes();
-        $supplies = [
-            'name' => $markerName  ?? 'Unknown',
+
+        return [
+            'name' => $markerName ?? 'Unknown',
             'color' => $markerColor ?? null,
             'type' => $markerType ?? null,
-            'level' => $this->getSupplyStatus((int) $markerLevel  ?? -1),
+            'level' => $this->getSupplyStatus((int) $markerLevel ?? self::LEVEL_UNKNOWN_1),
             'documentSize' => $this->printerAttributes->getDocumentSize()
         ];
-
-        return $supplies;
     }
 
     /**
@@ -61,10 +72,8 @@ class PrinterSupplies implements StatusInterface
         //@TODO - jānoskidro vai ir pareizs kārtridžs
         $currentValue = $this->printerAttributes->getMarkerLevels();
         $minValue = $this->alertConfig->getCartridgeMinValue();
-
         return $currentValue > $minValue;
     }
-
 
     /**
      * @return bool
@@ -73,7 +82,6 @@ class PrinterSupplies implements StatusInterface
     {
         $currentValue = $this->printerAttributes->getDrumLevel();
         $minValue = $this->alertConfig->getDrumMinValue();
-
         return $currentValue > $minValue;
     }
 
@@ -89,18 +97,23 @@ class PrinterSupplies implements StatusInterface
     public function getPrinterOutputTray(): string
     {
         $try = $this->printerAttributes->getPrinterOutputTray();
-
-        return $try->getAttributeValue(); //->decode($tryAttributeValues);
+        return $try->getAttributeValue();
     }
 
     protected function getSupplyStatus(int $level): string
     {
-        if ($level === -1) return 'unknown';
-        if ($level === -2) return 'unknown';
-        if ($level === -3) return 'unknown';
-        if ($level <= 10) return 'low';
-        if ($level <= 25) return 'medium';
-        return 'ok (' . $level .  ')';
-    }
+        if (in_array($level, [self::LEVEL_UNKNOWN_1, self::LEVEL_UNKNOWN_2, self::LEVEL_UNKNOWN_3])) {
+            return self::STATUS_UNKNOWN;
+        }
 
+        if ($level <= self::LEVEL_LOW_THRESHOLD) {
+            return self::STATUS_LOW;
+        }
+
+        if ($level <= self::LEVEL_MEDIUM_THRESHOLD) {
+            return self::STATUS_MEDIUM;
+        }
+
+        return 'ok (' . $level . ')';
+    }
 }

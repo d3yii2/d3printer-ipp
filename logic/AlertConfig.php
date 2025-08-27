@@ -6,54 +6,50 @@ use d3yii2\d3printer\models\AlertSettings as AlertSettingsModel;
 use d3yii2\d3printeripp\logic\PrinterConfig;
 
 /**
- * Class AlertSettings
+ * Class AlertConfig
  * @package d3yii2\d3printer\logic\settings
  */
 class AlertConfig
 {
     protected PrinterConfig $printerConfig;
-
     protected int $cartridgeMinValue;
-
     protected int $drumMinValue;
-
     protected string $paperSize;
-
     protected string $paperType;
-
     protected string $printOrientation;
-
     protected string $sleepAfter;
-
     protected string $emailFrom;
-
     protected ?string $emailTo = null;
-
     protected string $emailSubject;
-
     protected string $emailTemplate;
 
     /**
-     * AlertSettings constructor.
-     * @param string $addKey
+     * AlertConfig constructor.
+     * @param PrinterConfig $printerConfig
      */
     public function __construct(PrinterConfig $printerConfig)
     {
         $this->printerConfig = $printerConfig;
+        $this->initializeSettings();
+    }
 
-        $alertSettings = $printerConfig->getAlertSettings() ?? [];
+    /**
+     * Initialize alert settings with default values
+     */
+    private function initializeSettings(): void
+    {
+        $alertSettings = $this->printerConfig->getAlertSettings() ?? [];
 
-        $this->cartridgeMinValue = $alertSetttings['cartridgeMinValue'] ?? 10;
-        $this->drumMinValue = $alertSetttings['drumMinValue'] ?? 10;
-        $this->paperSize = $alertSetttings['paperSize'] ?? 'A5';
-        $this->paperType = $alertSetttings['paperType'] ?? '27';
-        $this->sleepAfter = $alertSetttings['sleepAfter'] ?? '15';
-        $this->printOrientation = $alertSetttings['printOrientation'] ?? 'Portrait';
-
-        $this->emailFrom = $alertSetttings['emailFrom'] ?? 'system@localhost';
-        $this->emailTo = $alertSetttings['emailTo'] ?? null;
-        $this->emailSubject = $alertSetttings['emailSubject'] ?? 'Printer ' . $printerConfig->getName() .  ' Alert';
-        $this->emailTemplate = $alertSetttings['emailTemplate'] ?? 'This is alert about the Printer %s ';
+        $this->cartridgeMinValue = $alertSettings['cartridgeMinValue'] ?? 10;
+        $this->drumMinValue = $alertSettings['drumMinValue'] ?? 10;
+        $this->paperSize = $alertSettings['paperSize'] ?? 'A5';
+        $this->paperType = $alertSettings['paperType'] ?? '27';
+        $this->sleepAfter = $alertSettings['sleepAfter'] ?? '15';
+        $this->printOrientation = $alertSettings['printOrientation'] ?? 'Portrait';
+        $this->emailFrom = $alertSettings['emailFrom'] ?? 'system@localhost';
+        $this->emailTo = $alertSettings['emailTo'] ?? null;
+        $this->emailSubject = $alertSettings['emailSubject'] ?? 'Printer ' . $this->printerConfig->getName() . ' Alert';
+        $this->emailTemplate = $alertSettings['emailTemplate'] ?? 'This is alert about the Printer %s ';
     }
 
     public function getDocumentSize(): string
@@ -76,39 +72,38 @@ class AlertConfig
         return $this->printOrientation;
     }
 
-
     /**
-     * @return string
+     * @return int
      */
-    public function getCartridgeMinValue(): string
+    public function getCartridgeMinValue(): int
     {
         return $this->cartridgeMinValue;
     }
-    
+
     /**
-     * @return string
+     * @return int
      */
-    public function getDrumMinValue(): string
+    public function getDrumMinValue(): int
     {
         return $this->drumMinValue;
     }
-    
+
     /**
-     * @return strings
+     * @return string
      */
     public function getEmailFrom(): string
     {
         return $this->emailFrom;
     }
-    
+
     /**
-     * @return string
+     * @return string|null
      */
-    public function getEmailTo(): array
+    public function getEmailTo(): ?string
     {
         return $this->emailTo;
     }
-    
+
     /**
      * @return string
      */

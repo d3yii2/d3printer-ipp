@@ -1,7 +1,5 @@
 <?php
-
 namespace d3yii2\d3printeripp\logic;
-
 
 use d3yii2\d3printeripp\types\PrinterAttributesTypes;
 use obray\ipp\Attribute;
@@ -15,14 +13,30 @@ use obray\ipp\PrinterAttributes as IPPPrinterAttributes;
 use d3yii2\d3printeripp\types\PrinterAttributes as PrinterAttributeType;
 
 /**
- * Get Printer attributes
+ * Class PrinterAttributes
+ *
+ * Represents and interacts with printer attributes utilizing provided configurations.
+ * Supports retrieval of various printer-related data, such as its state, output tray,
+ * marker details, and other descriptive metadata.
  */
 class PrinterAttributes
 {
+    private const ATTRIBUTE_KEYS = [
+        'marker-levels' => 'marker-levels',
+        'marker-colors' => 'marker-colors',
+        'marker-names' => 'marker-names',
+        'marker-types' => 'marker-types',
+        'printer-info' => 'printer-info',
+        'printer-make-and-model' => 'printer-make-and-model',
+        'printer-location' => 'printer-location',
+    ];
+
     protected ?IPPPrinterAttributes $attributes = null;
     protected ?PrinterConfig $printerConfig;
 
-
+    /**
+     * Constructor method for initializing the PrinterConfig.
+     */
     public function __construct(PrinterConfig $config)
     {
         $this->printerConfig = $config;
@@ -36,23 +50,18 @@ class PrinterAttributes
         if ($this->attributes) {
             return $this->attributes;
         }
-
-        $responsePatyload = Request::get($this->printerConfig, \obray\ipp\types\Operation::GET_PRINTER_ATTRIBUTES);
-
-        $printerAttributes = $responsePatyload->printerAttributes ?? null;
-
+        $responsePayload = Request::get($this->printerConfig, \obray\ipp\types\Operation::GET_PRINTER_ATTRIBUTES);
+        $printerAttributes = $responsePayload->printerAttributes ?? null;
         if (!empty($printerAttributes[0]) && $printerAttributes[0] instanceof IPPPrinterAttributes) {
             $this->attributes = $printerAttributes[0];
-
             return $this->attributes;
         }
-
         throw new Exception('Cannot request Printer attributes');
     }
 
     /**
-    * @param string $key
-    * @return Attribute
+     * @param string $key
+     * @return Attribute
      */
     public function getAttribute(string $key): Attribute
     {
@@ -71,113 +80,127 @@ class PrinterAttributes
     }
 
     /**
-     * @return Attribute
+     * Generic method to get string attribute values with error handling
+     * @param string $attributeKey
+     * @return string
+     * @throws Exception
+     */
+    private function getStringAttributeValue(string $attributeKey): string
+    {
+        try {
+            return (string) $this->getAttributeValue($attributeKey);
+        } catch (\Exception $e) {
+            throw new Exception("Failed to retrieve attribute '{$attributeKey}': " . $e->getMessage());
+        }
+    }
+
+    /**
+     * @return string
      * @throws Exception
      */
     public function getPrinterState(): string
     {
-        return $this->getAttributeValue(PrinterAttributeType::PRINTER_STATE);
+        return $this->getStringAttributeValue(PrinterAttributeType::PRINTER_STATE);
     }
 
     /**
-     * @return Attribute
+     * @return string
      * @throws Exception
      */
     public function getPrinterOutputTray(): string
     {
-        return $this->getAttributeValue(PrinterAttributeType::PRINTER_OUTPUT_TRAY);
+        return $this->getStringAttributeValue(PrinterAttributeType::PRINTER_OUTPUT_TRAY);
     }
 
     /**
-     * @return Attribute
+     * @return string
      * @throws Exception
      */
     public function getMarkerLevels(): string
     {
-        return $this->getAttributeValue('marker-levels');
+        return $this->getStringAttributeValue(self::ATTRIBUTE_KEYS['marker-levels']);
     }
 
     /**
-     * @return Attribute
+     * @return string
      * @throws Exception
      */
     public function getMarkerColors(): string
     {
-        return $this->getAttributeValue('marker-colors');
+        return $this->getStringAttributeValue(self::ATTRIBUTE_KEYS['marker-colors']);
     }
 
     /**
-     * @return Attribute
+     * @return string
      * @throws Exception
      */
     public function getMarkerNames(): string
     {
-        return $this->getAttributeValue('marker-names');
+        return $this->getStringAttributeValue(self::ATTRIBUTE_KEYS['marker-names']);
     }
 
     /**
-     * @return Attribute
+     * @return string
      * @throws Exception
      */
     public function getMarkerTypes(): string
     {
-        return $this->getAttributeValue('marker-types');
+        return $this->getStringAttributeValue(self::ATTRIBUTE_KEYS['marker-types']);
     }
 
     /**
-     * @return Attribute
+     * @return string
      * @throws Exception
      */
     public function getPrinterInfo(): string
     {
-        return $this->getAttributeValue('printer-info');
+        return $this->getStringAttributeValue(self::ATTRIBUTE_KEYS['printer-info']);
     }
 
     /**
-     * @return Attribute
+     * @return string
      * @throws Exception
      */
     public function getPrinterMakeAndModel(): string
     {
-        return $this->getAttributeValue('printer-make-and-model');
+        return $this->getStringAttributeValue(self::ATTRIBUTE_KEYS['printer-make-and-model']);
     }
 
     /**
-     * @return Attribute
+     * @return string
      * @throws Exception
      */
     public function getPrinterLocation(): string
     {
-        return $this->getAttributeValue('printer-location');
+        return $this->getStringAttributeValue(self::ATTRIBUTE_KEYS['printer-location']);
     }
 
-
     /**
-     * @return Attribute
+     * @return string
      * @throws Exception
      */
     public function getDocumentSize(): string
     {
-        //@TODO  - atributs nepareizs
-        return '???'; // $this->getAttributeValue(\d3yii2\d3printeripp\types\PrinterAttributes::MEDIA_SIZE);
+        // TODO: Fix incorrect attribute reference
+        return '???'; // $this->getStringAttributeValue(PrinterAttributeType::MEDIA_SIZE);
     }
 
     /**
-     * @return Attribute
+     * @return string
      * @throws Exception
      */
     public function getPrintOrientation(): string
     {
-        return $this->getAttributeValue(\d3yii2\d3printeripp\types\PrinterAttributes::ORIENTATION_REQUESTED);
+        return $this->getStringAttributeValue(PrinterAttributeType::ORIENTATION_REQUESTED);
     }
 
     /**
-     * @return Attribute
+     * @return string
      * @throws Exception
      */
     public function getDrumLevel(): string
     {
-        //@TODO
-        return $this->getAttributeValue('');
+        // TODO: Implement drum level attribute retrieval
+        return $this->getStringAttributeValue('');
     }
 }

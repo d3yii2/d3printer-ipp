@@ -2,7 +2,6 @@
 
 namespace d3yii2\d3printeripp\logic;
 
-
 use d3yii2\d3printeripp\logic\AlertConfig;
 use d3yii2\d3printeripp\logic\cache\PrinterCache;
 use d3yii2\d3printeripp\logic\PrinterAttributes;
@@ -22,25 +21,15 @@ use yii\base\Exception;
 abstract class BasePrinter implements PrinterInterface
 {
     protected PrinterConfig $config;
-
     protected IppPrinterClient $client;
-
     protected PrinterAttributes $attributes;
-
     protected PrinterJobs $jobs;
-
-    protected  PrinterDaemon $daemon;
-
-    protected  PrinterSpooler $spooler;
-
-    protected  PrinterSystem $system;
-
+    protected PrinterDaemon $daemon;
+    protected PrinterSpooler $spooler;
+    protected PrinterSystem $system;
     protected PrinterSupplies $supplies;
-
     protected PrinterCache $cache;
-
     protected ?IPPPayload $responsePayload = null;
-
     protected ?string $lastError = null;
 
     public const STATUS_HEALTH = 'health';
@@ -53,32 +42,32 @@ abstract class BasePrinter implements PrinterInterface
     public function __construct(PrinterConfig $config)
     {
         $this->config = $config;
+        $this->initializeClient();
+        $this->initializeComponents();
+    }
 
+    private function initializeClient(): void
+    {
         $this->client = new IppPrinterClient(
             $this->config->getUri(),
             $this->config->getUsername(),
             $this->config->getPassword(),
             $this->config->getCurlOptions()
         );
+    }
 
+    private function initializeComponents(): void
+    {
         $this->attributes = new PrinterAttributes($this->config);
-
-        $this->system = new PrinterSystem(
-            $this->config,
-            new AlertConfig($this->config),
-            $this->attributes
-        );
-
+        $alertConfig = new AlertConfig($this->config);
+        $this->system = new PrinterSystem($this->config, $alertConfig, $this->attributes);
         $this->daemon = new PrinterDaemon($this->config);
-
         $this->spooler = new PrinterSpooler($this->config);
 
-        //@TODO cache this
-        $refreshAttributes = $this->attributes->getAll();
+        $this->attributes->getAll(); // Initialize attributes
+
         $this->supplies = new PrinterSupplies($this->config, $this->attributes);
-
         $this->jobs = new PrinterJobs($this->config, $this->client);
-
         $this->cache = new PrinterCache($this->config);
     }
 
@@ -130,39 +119,48 @@ abstract class BasePrinter implements PrinterInterface
     public function updateCache()
     {
         $status = $this->getFullStatus();
-
         $this->cache->update($status);
     }
 
     public function getFullStatus(bool $forceRefresh = false)
     {
-        $now = time();
-
-        $cachedStats = $this->cache->getData('stats');
-        $lastCheckedTimestamp = $cachedStats['lastChecked'] ?? null;
-
-        if (
-            !$forceRefresh &&  $lastCheckedTimestamp
-            || ($now - $lastCheckedTimestamp) > $this->config->getCacheDuration()
-        ) {
-
-            if (!empty($cachedStats)) {
+        if (!$forceRefresh) {
+            $cachedStats = $this->getCachedStatsIfValid();
+            if ($cachedStats !== null) {
                 return $cachedStats;
             }
         }
 
-        $stats = [
-            'lastChecked' => $now,
+        $stats = $this->generateCurrentStats();
+        $this->cache->update(['stats' => $stats]);
+        return $stats;
+    }
+
+    private function getCachedStatsIfValid(): ?array
+    {
+        $cachedStats = $this->cache->getData('stats');
+        $lastCheckedTimestamp = $cachedStats['lastChecked'] ?? null;
+
+        if (empty($cachedStats) || !$lastCheckedTimestamp) {
+            return null;
+        }
+
+        $now = time();
+        $isCacheExpired = ($now - $lastCheckedTimestamp) > $this->config->getCacheDuration();
+
+        return $isCacheExpired ? null : $cachedStats;
+    }
+
+    private function generateCurrentStats(): array
+    {
+        return [
+            'lastChecked' => time(),
             self::STATUS_DAEMON => $this->getDaemonStatus(),
             self::STATUS_FTP => $this->getFtpStatus(),
             self::STATUS_SPOOLER => $this->getSpoolerStatus(),
             self::STATUS_SUPPLIES => $this->getSuppliesStatus(),
             self::STATUS_SYSTEM => $this->getSystemStatus()
         ];
-
-        $this->cache->update(['stats' => $stats]) ;
-
-        return $stats;
     }
 
     public function getSystemStatus()

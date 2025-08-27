@@ -1,8 +1,6 @@
 <?php
 
-
 namespace d3yii2\d3printeripp\logic;
-
 
 use d3system\helpers\D3FileHelper;
 use d3yii2\d3printeripp\interfaces\StatusInterface;
@@ -18,44 +16,47 @@ use yii\base\Exception;
  */
 class PrinterSpooler implements StatusInterface
 {
+    private const DEFAULT_BASE_DIRECTORY = 'd3printeripp';
+    private const SPOOL_DIRECTORY_PREFIX = 'spool_';
+    private const DEAD_FILE_PREFIX = 'dead_';
+    private const DEAD_FILE_EXTENSION = '.txt';
+    private const DEAD_FILE_CONTENT = '1';
+    private const TIMESTAMP_FORMAT = 'YmdHis';
+    private const RANDOM_RANGE_MAX = 999;
+
     protected PrinterConfig $printerConfig;
-
-
-    /**
-     * @var string
-     */
-    public $baseDirectory = 'd3printeripp';
-
+    protected string $baseDirectory = self::DEFAULT_BASE_DIRECTORY;
 
     public function __construct(PrinterConfig $config)
     {
         $this->printerConfig = $config;
     }
 
-
-    public function getStatus() : array
+    public function getStatus(): array
     {
         return [
             'path' => $this->getSpoolDirectory(),
             'filesCount' => $this->getSpoolFilesCount(),
-            'deadFileExists' => $this->existDeadFile(),
+            'deadFileExists' => $this->deadFileExists(),
         ];
     }
 
     /**
-     * @throws \yii\base\Exception
+     * @throws Exception
      */
     public function printToSpoolDirectory(string $filepath, int $copies = 1): bool
     {
-        if(!file_exists($filepath)){
-            throw new Exception('Neeksite fails: ' . $filepath);
+        if (!file_exists($filepath)) {
+            throw new Exception("Source file does not exist: {$filepath}");
         }
-        $spoolDirectory = D3FileHelper::getRuntimeDirectoryPath($this->getSpoolDirectory());
-        $pi = pathinfo($filepath);
+
+        $spoolDirectoryPath = $this->getSpoolDirectoryPath();
+        $pathInfo = pathinfo($filepath);
+
         for ($i = 1; $i <= $copies; $i++) {
-            $toFile = $spoolDirectory . '/' . $pi['filename'] . $i . '.' . $pi['extension'];
-            if (!copy($filepath, $toFile)) {
-                throw new Exception('Can not copy file to ' . $toFile);
+            $destinationFile = $spoolDirectoryPath . '/' . $pathInfo['filename'] . $i . '.' . $pathInfo['extension'];
+            if (!copy($filepath, $destinationFile)) {
+                throw new Exception("Failed to copy file to spool directory: {$destinationFile}");
             }
         }
 
@@ -63,75 +64,79 @@ class PrinterSpooler implements StatusInterface
     }
 
     /**
-     * @throws \yii\base\Exception
-     * @throws \Exception
+     * @throws Exception
      */
     public function saveToSpoolDirectory(string $fileData, int $copies = 1): bool
     {
-        $spoolDirectory = D3FileHelper::getRuntimeDirectoryPath($this->getSpoolDirectory());
+        $spoolDirectoryPath = $this->getSpoolDirectoryPath();
+        $timestamp = date(self::TIMESTAMP_FORMAT) . '_' . random_int(0, self::RANDOM_RANGE_MAX);
 
-        $timestamp = date('YmdHis') . '_' . random_int(0,999);
         for ($i = 1; $i <= $copies; $i++) {
-            $toFile = $spoolDirectory . '/' . $timestamp .'_' . $i . '.txt';
-            if (!file_put_contents($toFile,$fileData)) {
-                throw new Exception('Can not save file ' . $toFile . ' to printer spool directory');
+            $destinationFile = $spoolDirectoryPath . '/' . $timestamp . '_' . $i . self::DEAD_FILE_EXTENSION;
+            if (!file_put_contents($destinationFile, $fileData)) {
+                throw new Exception("Failed to save file to spool directory: {$destinationFile}");
             }
         }
+
         return true;
     }
 
     public function getSpoolDirectory(): string
     {
-        return $this->baseDirectory  . '/spool_' . $this->printerConfig->getSlug();
+        return $this->baseDirectory . '/' . self::SPOOL_DIRECTORY_PREFIX . $this->printerConfig->getSlug();
     }
 
     /**
-     * @throws \yii\base\Exception
+     * @throws Exception
+     */
+    private function getSpoolDirectoryPath(): string
+    {
+        return D3FileHelper::getRuntimeDirectoryPath($this->getSpoolDirectory());
+    }
+
+    /**
+     * @throws Exception
      */
     public function getSpoolDirectoryFiles(): array
     {
-        if ($list = D3FileHelper::getDirectoryFiles($this->getSpoolDirectory())) {
-            return $list;
-        }
-
-        return [];
+        $files = D3FileHelper::getDirectoryFiles($this->getSpoolDirectory());
+        return $files ?: [];
     }
 
     /**
-     * @throws \yii\base\Exception
+     * @throws Exception
      */
     public function getSpoolFilesCount(): int
     {
         return count($this->getSpoolDirectoryFiles());
     }
 
-
-    private function createDeadFileName(): string
+    private function getDeadFileName(): string
     {
-        return 'dead_' . $this->printerConfig->getSlug() . '.txt';
+        return self::DEAD_FILE_PREFIX . $this->printerConfig->getSlug() . self::DEAD_FILE_EXTENSION;
     }
 
     /**
-     * @throws \yii\base\Exception
+     * @throws Exception
      */
     public function createDeadFile(): void
     {
-        D3FileHelper::filePutContentInRuntime($this->baseDirectory, $this->createDeadFileName(), '1');
+        D3FileHelper::filePutContentInRuntime($this->baseDirectory, $this->getDeadFileName(), self::DEAD_FILE_CONTENT);
     }
 
     /**
-     * @throws \yii\base\Exception
+     * @throws Exception
      */
     public function unlinkDeadFile(): void
     {
-        D3FileHelper::fileUnlinkInRuntime($this->baseDirectory, $this->createDeadFileName());
+        D3FileHelper::fileUnlinkInRuntime($this->baseDirectory, $this->getDeadFileName());
     }
 
     /**
-     * @throws \yii\base\Exception
+     * @throws Exception
      */
-    public function existDeadFile(): bool
+    public function deadFileExists(): bool
     {
-        return D3FileHelper::fileExist($this->baseDirectory, $this->createDeadFileName());
+        return D3FileHelper::fileExist($this->baseDirectory, $this->getDeadFileName());
     }
 }
