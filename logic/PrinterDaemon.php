@@ -1,9 +1,9 @@
 <?php
+declare(strict_types=1);
 
 namespace d3yii2\d3printeripp\logic;
 
 use d3yii2\d3printeripp\interfaces\StatusInterface;
-use yii\base\Exception;
 
 /**
  * Class PrinterDaemon
@@ -13,10 +13,10 @@ class PrinterDaemon implements StatusInterface
 {
     private PrinterConfig $printerConfig;
 
-    public const STATUS_ACTIVE = 'active';
-    public const STATUS_INACTIVE = 'inactive';
-    public const STATUS_FAILED = 'failed';
-    public const STATUS_UNKNOWN = 'unknown';
+    public const STATUS_ACTIVE = 'Active';
+    public const STATUS_INACTIVE = 'Inactive';
+    public const STATUS_FAILED = 'Failed';
+    public const STATUS_UNKNOWN = 'Unknown';
 
     private ?string $rawStatus = null;
 
@@ -25,19 +25,25 @@ class PrinterDaemon implements StatusInterface
         $this->printerConfig = $printerConfig;
     }
 
+    /**
+     * @return array{status: string}
+     */
     public function getStatus(): array
     {
         return [
-            'status' => $this->getState(),
+            'status' => $this->getState()
         ];
     }
 
+    /**
+     * @return string
+     */
     public function getState(): string
     {
         $command = sprintf('systemctl status %s', $this->printerConfig->getDaemonName());
         $output = $this->executeCommand($command);
 
-        return $this->parseStatusFromOutput($output);
+        return PrinterDaemon::parseStatusFromOutput($output);
     }
 
     private function executeCommand(string $command): ?string
@@ -48,7 +54,11 @@ class PrinterDaemon implements StatusInterface
         return $output;
     }
 
-    private function parseStatusFromOutput(?string $output): string
+    /**
+     * @param string|null $output
+     * @return string
+     */
+    private static function parseStatusFromOutput(?string $output): string
     {
         if ($output === null) {
             return self::STATUS_UNKNOWN;
@@ -68,13 +78,9 @@ class PrinterDaemon implements StatusInterface
         return self::STATUS_UNKNOWN;
     }
 
-    public function statusOk(): bool
-    {
-        $currentStatus = $this->getState();
-
-        return $currentStatus === self::STATUS_ACTIVE;
-    }
-
+    /**
+     * @return string|null
+     */
     public function getRawStatus(): ?string
     {
         return $this->rawStatus;

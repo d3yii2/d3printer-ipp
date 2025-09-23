@@ -7,5 +7,5 @@ return [
     'FTP status' => 'FTP statuss',
     'Ready' => 'Gaida',
     'Down' => 'Nedarbojas',
-    '' => '',
+    'Unknown' => 'Nezināms',
 ];

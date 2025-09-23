@@ -1,22 +1,26 @@
 <?php
+declare(strict_types=1);
 
 namespace d3yii2\d3printeripp\commands;
-
 
 use d3yii2\d3printeripp\components\PrinterIPPComponent;
 use d3yii2\d3printeripp\types\PrinterAttributes;
 use d3yii2\d3printeripp\logic\printers\HPPrinter;
-use d3yii2\d3printeripp\types\PrinterAttributeValues;
 use yii\base\Exception;
 use Yii;
+use yii\console\Controller;
 
 /**
  * Example Console Command for printer management
  */
-class PrinterCommand extends \yii\console\Controller
+class PrinterCommand extends Controller
 {
     private PrinterIPPComponent $printerManager;
 
+    /**
+     * {@inheritdoc}
+     * @since 2.0.36
+     */
     public function init()
     {
         $this->printerManager = Yii::$app->printerManager;
@@ -32,7 +36,7 @@ class PrinterCommand extends \yii\console\Controller
 
             foreach ($health as $printerName => $status) {
                 print_r($status);
-                $this->stdout("Printer: {$printerName}\n");
+                $this->stdout("Printer: $printerName\n");
                 $this->stdout("Online: " . ( $status['system']['alive'] === 1  ? 'Yes' :  'No' ) . "\n");
 
                 if (isset($status['supplies'])) {
@@ -52,13 +56,12 @@ class PrinterCommand extends \yii\console\Controller
         } catch (Exception $e) {
             Yii::error($e->getTraceAsString());
             $this->stdout("Unexpected error \n");
-
         }
     }
 
     public function actionHealth(?string $slug)
     {
-        $health = $this->printerManager->getHealthStatus($slug,true); // Force refresh
+        $health = $this->printerManager->getHealthStatus($slug, true); // Force refresh
 
         print_r($status);
         $this->stdout("Printer: {$printerName}\n");
@@ -80,6 +83,7 @@ class PrinterCommand extends \yii\console\Controller
 
     /**
      * Test print to all printers
+     * @throws Exception
      */
     public function actionTestPrint(?string $slug = HPPrinter::SLUG)
     {
@@ -87,7 +91,7 @@ class PrinterCommand extends \yii\console\Controller
         $testDocument = "%!PS-Adobe-3.0\n";
         $testDocument .= "72 720 moveto\n";
         $testDocument .= "/Times-Roman findfont 24 scalefont setfont\n";
-        $testDocument .= "(Test Print - " . date('Y-m-d H:i:s') . ") show\n";
+        $testDocument .= '(Test Print - ' . date('Y-m-d H:i:s') . ") show\n";
         $testDocument .= "showpage\n";
         
         $options = [

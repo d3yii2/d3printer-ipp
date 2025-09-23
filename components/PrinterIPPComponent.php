@@ -1,10 +1,11 @@
 <?php
+declare(strict_types=1);
 
 namespace d3yii2\d3printeripp\components;
 use d3yii2\d3printeripp\interfaces\PrinterInterface;
-use d3yii2\d3printeripp\logic\BasePrinter;
 use d3yii2\d3printeripp\logic\PrinterConfig;
 use d3yii2\d3printeripp\logic\PrinterData;
+use Yii;
 use yii\base\Component;
 use yii\base\Exception;
 use yii\base\InvalidConfigException;
@@ -51,9 +52,15 @@ class PrinterIPPComponent extends Component
     /**
      * @var array Printer configurations
      */
-    public $printers = [];
-    private $instances = [];
+    public array $printers = [];
+    private array $instances = [];
 
+    /**
+     * Initializes the object.
+     * This method is invoked at the end of the constructor after the object is initialized with the
+     * given configuration.
+     * @throws InvalidConfigException
+     */
     public function init()
     {
         parent::init();
@@ -66,6 +73,10 @@ class PrinterIPPComponent extends Component
         }
     }
 
+    /**
+     * @param array $config
+     * @return void
+     */
     public function addPrinter(array $config): void
     {
         $printerConfig = new PrinterConfig($config);
@@ -73,11 +84,19 @@ class PrinterIPPComponent extends Component
         $this->instances[$config['slug']] = $printer;
     }
 
+    /**
+     * @param string $slug
+     * @return PrinterInterface|null
+     */
     public function getPrinter(string $slug): ?PrinterInterface
     {
         return $this->instances[$slug] ?? null;
     }
 
+    /**
+     * @param string $slug
+     * @return void
+     */
     public function removePrinter(string $slug): void
     {
         if (isset($this->instances[$slug])) {
@@ -103,6 +122,9 @@ class PrinterIPPComponent extends Component
         return $status;
     }
 
+    /**
+     * @throws Exception
+     */
     public function getStatus(string $printerSlug): array
     {
         $printer = $this->validatePrinterExists($printerSlug);
@@ -113,6 +135,9 @@ class PrinterIPPComponent extends Component
         );
     }
 
+    /**
+     * @throws Exception
+     */
     public function print(string $printerSlug, string $document, array $options = []): array
     {
         $printer = $this->validatePrinterExists($printerSlug);
@@ -145,19 +170,26 @@ class PrinterIPPComponent extends Component
     /**
      * Get registered printer types
      */
-    public function getSupportedPrinterTypes(): array
+    public static function getSupportedPrinterTypes(): array
     {
         return PrinterFactory::getSupportedTypes();
     }
 
     /**
-     * Register new printer type
+     * @param string $type
+     * @param string $className
+     * @return void
      */
-    public function registerPrinterType(string $type, string $className): void
+    public static function registerPrinterType(string $type, string $className): void
     {
         PrinterFactory::registerPrinterType($type, $className);
     }
 
+    /**
+     * @param string $printerSlug
+     * @return PrinterInterface
+     * @throws Exception
+     */
     private function validatePrinterExists(string $printerSlug): PrinterInterface
     {
         $printer = $this->instances[$printerSlug] ?? null;
@@ -169,6 +201,11 @@ class PrinterIPPComponent extends Component
         return $printer;
     }
 
+    /**
+     * @param callable $operation
+     * @param array $errorResponse
+     * @return array
+     */
     private function executeWithErrorHandling(callable $operation, array $errorResponse): array
     {
         try {
@@ -178,126 +215,14 @@ class PrinterIPPComponent extends Component
         }
     }
 
-    private function createErrorStatus(string $defaultMessage): array
+    /**
+     * @return array
+     */
+    private function createErrorStatus(): array
     {
         return [
             self::STATUS_ALIVE => false,
             self::STATUS_LAST_CHECK => date('Y-m-d H:i:s')
         ];
-    }
-}
-
-// ===================================================================
-// USAGE EXAMPLES
-// ===================================================================
-/**
- * Example Controller showing how to use the Printer Manager
- */
-class PrinterController extends \yii\web\Controller
-{
-    /**
-     * Print a document
-     */
-    public function actionPrint()
-    {
-        try {
-            // Get the printer manager component
-            $printerManager = \Yii::$app->printerManager;
-
-            // Example document content (could be PDF, PostScript, etc.)
-            $document = file_get_contents('/path/to/document.pdf');
-
-            // Print options
-            $options = [
-                'job-name' => 'Test Document',
-                'copies' => 2,
-                'media' => 'iso_a4_210x297mm',
-                'sides' => 'two-sided-long-edge'
-            ];
-
-            // Print to specific printer
-            $result = $printerManager->print('office_hp', $document, $options);
-
-            if ($result['success']) {
-                return $this->asJson([
-                    'status' => 'success',
-                    'job_id' => $result['job-id'],
-                    'message' => 'Document sent to printer successfully'
-                ]);
-            } else {
-                return $this->asJson([
-                    'status' => 'error',
-                    'message' => 'Failed to print document'
-                ]);
-            }
-
-        } catch (\Exception $e) {
-            return $this->asJson([
-                'status' => 'error',
-                'message' => $e->getMessage()
-            ]);
-        }
-    }
-
-    /**
-     * Get printer health status
-     */
-    public function actionHealth(string $slug)
-    {
-        $printerManager = \Yii::$app->printerManager;
-        $health = $printerManager->getHealthStatus($slug);
-
-        return $this->asJson($health);
-    }
-
-    /**
-     * Get specific printer status
-     */
-    public function actionStatus($slug)
-    {
-        $printerManager = \Yii::$app->printerManager;
-        $printer = $printerManager->getPrinter($slug);
-
-        if (!$printer) {
-            throw new \yii\web\NotFoundHttpException("Printer not found");
-        }
-
-        try {
-            $status = [
-                'online' => $printer->isOnline(),
-                'status' => $printer->getStatus(),
-                'supplies' => $printer->getSuppliesStatus(),
-                'system_info' => $printer->getSystemInfo(),
-                'jobs' => $printer->getJobs()
-            ];
-
-            return $this->asJson($status);
-
-        } catch (\Exception $e) {
-            return $this->asJson([
-                'error' => $e->getMessage(),
-                'online' => false
-            ]);
-        }
-    }
-
-    /**
-     * Cancel a print job
-     */
-    public function actionCancelJob($slug, $jobId)
-    {
-        $printerManager = \Yii::$app->printerManager;
-        $printer = $printerManager->getPrinter($slug);
-
-        if (!$printer) {
-            throw new \yii\web\NotFoundHttpException("Printer not found");
-        }
-
-        $success = $printer->cancelJob((int)$jobId);
-
-        return $this->asJson([
-            'success' => $success,
-            'message' => $success ? 'Job cancelled successfully' : 'Failed to cancel job'
-        ]);
     }
 }

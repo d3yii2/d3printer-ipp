@@ -7,5 +7,8 @@ namespace d3yii2\d3printeripp\interfaces;
  */
 interface StatusInterface
 {
+    /**
+     * @return array
+     */
     public function getStatus(): array;
 }

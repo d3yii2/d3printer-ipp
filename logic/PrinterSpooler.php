@@ -1,11 +1,11 @@
 <?php
+declare(strict_types=1);
 
 namespace d3yii2\d3printeripp\logic;
 
 use d3system\helpers\D3FileHelper;
 use d3yii2\d3printeripp\interfaces\StatusInterface;
-use d3yii2\d3printeripp\logic\PrinterConfig;
-use yii\base\Component;
+use Random\RandomException;
 use yii\base\Exception;
 
 /**
@@ -27,17 +27,24 @@ class PrinterSpooler implements StatusInterface
     protected PrinterConfig $printerConfig;
     protected string $baseDirectory = self::DEFAULT_BASE_DIRECTORY;
 
+    /**
+     * @param PrinterConfig $config
+     */
     public function __construct(PrinterConfig $config)
     {
         $this->printerConfig = $config;
     }
 
+    /**
+     * @return array{path: string, filesCount: int, deadFileExists: string}
+     * @throws Exception
+     */
     public function getStatus(): array
     {
         return [
             'path' => $this->getSpoolDirectory(),
             'filesCount' => $this->getSpoolFilesCount(),
-            'deadFileExists' => $this->deadFileExists(),
+            'deadFileExists' => $this->deadFileExists() ? ValueFormatter::YES : ValueFormatter::NO,
         ];
     }
 
@@ -47,7 +54,7 @@ class PrinterSpooler implements StatusInterface
     public function printToSpoolDirectory(string $filepath, int $copies = 1): bool
     {
         if (!file_exists($filepath)) {
-            throw new Exception("Source file does not exist: {$filepath}");
+            throw new Exception("Source file does not exist: $filepath");
         }
 
         $spoolDirectoryPath = $this->getSpoolDirectoryPath();
@@ -56,7 +63,7 @@ class PrinterSpooler implements StatusInterface
         for ($i = 1; $i <= $copies; $i++) {
             $destinationFile = $spoolDirectoryPath . '/' . $pathInfo['filename'] . $i . '.' . $pathInfo['extension'];
             if (!copy($filepath, $destinationFile)) {
-                throw new Exception("Failed to copy file to spool directory: {$destinationFile}");
+                throw new Exception("Failed to copy file to spool directory: $destinationFile");
             }
         }
 
@@ -64,7 +71,7 @@ class PrinterSpooler implements StatusInterface
     }
 
     /**
-     * @throws Exception
+     * @throws Exception|RandomException
      */
     public function saveToSpoolDirectory(string $fileData, int $copies = 1): bool
     {
@@ -74,13 +81,16 @@ class PrinterSpooler implements StatusInterface
         for ($i = 1; $i <= $copies; $i++) {
             $destinationFile = $spoolDirectoryPath . '/' . $timestamp . '_' . $i . self::DEAD_FILE_EXTENSION;
             if (!file_put_contents($destinationFile, $fileData)) {
-                throw new Exception("Failed to save file to spool directory: {$destinationFile}");
+                throw new Exception("Failed to save file to spool directory: $destinationFile");
             }
         }
 
         return true;
     }
 
+    /**
+     * @return string
+     */
     public function getSpoolDirectory(): string
     {
         return $this->baseDirectory . '/' . self::SPOOL_DIRECTORY_PREFIX . $this->printerConfig->getSlug();
@@ -111,6 +121,9 @@ class PrinterSpooler implements StatusInterface
         return count($this->getSpoolDirectoryFiles());
     }
 
+    /**
+     * @return string
+     */
     private function getDeadFileName(): string
     {
         return self::DEAD_FILE_PREFIX . $this->printerConfig->getSlug() . self::DEAD_FILE_EXTENSION;

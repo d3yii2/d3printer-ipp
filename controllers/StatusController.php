@@ -1,23 +1,47 @@
 <?php
+declare(strict_types=1);
 
 namespace d3yii2\d3printeripp\controllers;
 
 use d3yii2\d3printeripp\components\PrinterIPPComponent;
-use yii\helpers\Html;
+use Exception;
+use Yii;
+use yii\web\Controller;
+use yii\web\Response;
 
-class StatusController extends \yii\web\Controller
+/**
+ *
+ */
+class StatusController extends Controller
 {
-    private PrinterIPPComponent $printerManager;
+    private ?PrinterIPPComponent $printerManager = null;
 
+    public $enableCsrfValidation = false;
+
+    /**
+     * {@inheritdoc}
+     * @since 2.0.36
+     */
     public function init()
     {
-        $this->printerManager = Yii::$app->printerManager;
+        try {
+            parent::init();
+
+            $this->printerManager = Yii::$app->printerManager;
+            Yii::$app->response->formatters[Response::FORMAT_JSON] = [
+                'class' => 'yii\web\JsonResponseFormatter',
+            ];
+        } catch (Exception $e) {
+            Yii::error($e->getMessage());
+        }
     }
 
-    public function actionIndex(string $printerSlug = null)
+    /**
+     * @param string|null $printerSlug
+     * @return array|array[]
+     */
+    public function actionIndex(string $printerSlug = null): array
     {
-        $this->response->format = \yii\web\Response::FORMAT_JSON;
-
         $response = [];
 
         if (!$printerSlug) {
@@ -26,69 +50,81 @@ class StatusController extends \yii\web\Controller
             return $response;
         }
 
-        $printer = $this->printerManager->getPrinter($printerSlug);
-
-        if (!$printer) {
+        if (!$this->printerManager) {
             $response['status'] = 'error';
-            $response['message'] = 'Printer not found';
+            $response['message'] = 'Failed to initialize Printer';
             return $response;
         }
 
-        $status = $printer->getFullStatus();
+        try {
+            $printer = $this->printerManager->getPrinter($printerSlug);
 
-        $response = [
-            'printerName' => $status['printerName'],
-            'printerAccessUrl' => $status['printerAccessUrl'],
-            'info' => [
-                'columns' => [
-                    [
-                        'header' => '',
-                        'attribute' => 'label',
+            if (!$printer) {
+                $response['status'] = 'error';
+                $response['message'] = 'Printer not found';
+                return $response;
+            }
+
+            $status = $printer->getFullStatus();
+
+            $response = [
+                'printerName' => $status['system']['model'],
+                'printerAccessUrl' => $status['system']['deviceUri'],
+                'info' => [
+                    'columns' => [
+                        [
+                            'header' => '',
+                            'attribute' => 'label',
+                        ],
+                        [
+                            'header' => '',
+                            'attribute' => 'value',
+                        ],
                     ],
-                    [
-                        'header' => '',
-                        'attribute' => 'value',
+                    'data' => [
+                        [
+                            'label' => Yii::t('d3printeripp', 'Status'),
+                            'value' => $status['system']['state'],
+                        ],
+                        [
+                            'label' => Yii::t('d3printeripp', 'Cartridge'),
+                            'value' => $status['supplies']['level'],
+                        ],
+                        [
+                            'label' => Yii::t('d3printeripp', 'Drum'),
+                            'value' => '?'
+                        ],
+                        [
+                            'label' => Yii::t('d3printeripp', 'FTP status'),
+                            'value' => $status['ftp'],
+                        ],
+                        [
+                            'label' => Yii::t('d3printeripp', 'Spooler'),
+                            'value' => $status['spooler']['deadFileExists'] ? 'Dead' : Yii::t('d3printeripp', 'OK'),
+                        ],
+                        [
+                            'label' => Yii::t('d3printeripp', 'IP'),
+                            'value' => '?',
+                        ],
+                        [
+                            'label' => Yii::t('d3printeripp', 'Daemon Status'),
+                            'value' => $status['daemon']['status'],
+                        ],
                     ],
                 ],
-                'data' => [
-                    [
-                        'label' => Yii::t('d3printeripp', 'Status'),
-                        'value' => $displayData['status'],
-                    ],
-                    [
-                        'label' => Yii::t('d3printeripp','Cartridge'),
-                        'value' => $displayData['cartridge'],
-                    ],
-                    [
-                        'label' => Yii::t('d3printeripp','Drum'),
-                        'value' => $displayData['drum']
-                    ],
-                    [
-                        'label' => Yii::t('d3printeripp', 'FTP status'),
-                        'value' => $displayData['ftpState'],
-                    ],
-                    [
-                        'label' => Yii::t('d3printeripp', 'Spooler'),
-                        'value' => $displayData['spool'],
-                    ],
-                    [
-                        'label' => Yii::t('d3printeripp', 'IP'),
-                        'value' => $displayData['ip'],
-                    ],
-                    [
-                        'label' => Yii::t('d3printeripp', 'Daemon Status'),
-                        'value' => $displayData['daemonStatus'],
-                    ],
-                ],
-            ],
-            //'deviceErrors' => $displayData['deviceErrors'],
-            //'lastLoggedErrors' => []
-        ];
+                //'deviceErrors' => $displayData['deviceErrors'],
+                //'lastLoggedErrors' => []
+            ];
 
-        /*foreach ($displayData['lastLoggedErrors'] as $error) {
-            $data['lastLoggedErrors'][] = str_replace(PHP_EOL, '<br>', $error);
-        }*/
+            /*foreach ($displayData['lastLoggedErrors'] as $error) {
+                $data['lastLoggedErrors'][] = str_replace(PHP_EOL, '<br>', $error);
+            }*/
 
-        return $response;
+            return ['data' => $response];
+        } catch (Exception $e) {
+            $response['status'] = 'error';
+            $response['message'] = $e->getMessage();
+            return $response;
+        }
     }
 }

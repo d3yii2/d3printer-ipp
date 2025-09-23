@@ -1,15 +1,11 @@
 <?php
-
-
+declare(strict_types=1);
 namespace d3yii2\d3printeripp\logic;
 
-use d3yii2\d3printeripp\logic\PrinterConfig;
-use obray\ipp\Attribute;
 use obray\ipp\Printer as IppPrinterClient;
 use obray\ipp\transport\IPPPayload;
-use yii\base\Component;
+use obray\transport\IPP;
 use yii\base\Exception;
-use yii\base\InvalidConfigException;
 
 /**
  * work only on windows
@@ -32,12 +28,19 @@ class PrinterJobs
     private const RETRY_DELAY_MICROSECONDS = 1000000; // 1 second
     private const PRINT_TIMEOUT_SECONDS = 60;
 
+    /**
+     * @param PrinterConfig $config
+     * @param IppPrinterClient $client
+     */
     public function __construct(PrinterConfig $config, IppPrinterClient $client)
     {
         $this->printerConfig = $config;
         $this->client = $client;
     }
 
+    /**
+     * @throws Exception
+     */
     public function print(string $document, array $options = []): array
     {
         $originalTimeLimit = $this->setTimeLimit(self::PRINT_TIMEOUT_SECONDS);
@@ -48,8 +51,8 @@ class PrinterJobs
             for ($attempt = 1; $attempt <= self::MAX_RETRY_ATTEMPTS; $attempt++) {
                 $response = $this->attemptPrintJob($document, $options);
 
-                if ($this->isPrintSuccessful($response)) {
-                    return $this->extractJobAttributes($response);
+                if (PrinterJobs::isPrintSuccessful($response)) {
+                    return PrinterJobs::extractJobAttributes($response);
                 }
 
                 if ($attempt < self::MAX_RETRY_ATTEMPTS) {
@@ -57,22 +60,35 @@ class PrinterJobs
                 }
             }
 
-            throw new Exception('Cannot print after ' . self::MAX_RETRY_ATTEMPTS . ' attempts. Last response: ' . $response->statusCode);
+            throw new Exception(
+                'Cannot print after ' . self::MAX_RETRY_ATTEMPTS
+                . ' attempts. Last response: ' . ( $response->statusCode ?? 'unknown' )
+            );
         } finally {
             set_time_limit($originalTimeLimit);
         }
     }
 
-    public function getAllJobs(): array
+    /**
+     * @return IPPPayload
+     */
+    public function getAllJobs(): IPPPayload
     {
         return $this->client->getJobs();
     }
 
+    /**
+     * @return IPPPayload
+     */
     public function purgeAllJobs(): IPPPayload
     {
         return $this->client->purgeJobs();
     }
 
+    /**
+     * @param int $jobId
+     * @return bool
+     */
     public function cancelJob(int $jobId): bool
     {
         $this->client->setOperationId(IPP::CANCEL_JOB);
@@ -84,6 +100,10 @@ class PrinterJobs
             $response['operation-attributes']['status-code'] === IPP::SUCCESSFUL_OK;
     }
 
+    /**
+     * @param int $seconds
+     * @return int
+     */
     private function setTimeLimit(int $seconds): int
     {
         $currentLimit = (int)ini_get('max_execution_time');
@@ -91,17 +111,33 @@ class PrinterJobs
         return $currentLimit;
     }
 
+    /**
+     * @param string $document
+     * @param array $options
+     * @return IPPPayload
+     */
     private function attemptPrintJob(string $document, array $options): IPPPayload
     {
         return $this->client->printJob($document, 1, $options);
     }
 
-    private function isPrintSuccessful(IPPPayload $response): bool
+    /**
+     * @param IPPPayload $response
+     * @return bool
+     */
+    private static function isPrintSuccessful(IPPPayload $response): bool
     {
         return $response->statusCode->getClass() === 'successful';
     }
 
-    private function extractJobAttributes(IPPPayload $response): array
+    /**
+     * @return array{PrinterJobs.JOB_ID: mixed,
+     * \d3yii2\d3printeripp\logic\PrinterJobs.JOB_STATE: mixed,
+     * \d3yii2\d3printeripp\logic\PrinterJobs.JOB_STATE_MESSAGE: mixed,
+     * \d3yii2\d3printeripp\logic\PrinterJobs.JOB_STATE_REASONS: mixed,
+     * \d3yii2\d3printeripp\logic\PrinterJobs.JOB_URI: mixed}
+     */
+    private static function extractJobAttributes(IPPPayload $response): array
     {
         $jobAttributes = $response->jobAttributes->attributes ?? [];
 

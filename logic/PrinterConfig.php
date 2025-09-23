@@ -1,4 +1,3 @@
-
 <?php
 
 namespace d3yii2\d3printeripp\logic;

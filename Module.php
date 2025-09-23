@@ -1,10 +1,10 @@
 <?php
+declare(strict_types=1);
 
 namespace d3yii2\d3printeripp;
 
 use d3system\yii2\base\D3Module;
 use Yii;
-use yii\log\FileTarget;
 
 /**
  * Class Module
@@ -17,7 +17,7 @@ class Module extends D3Module
     /**
      * @return string
      */
-    public function getLabel(): string
+    public static function getLabel(): string
     {
         return Yii::t('d3printeripp', 'd3yii2/d3printeripp');
     }

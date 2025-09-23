@@ -1,9 +1,7 @@
 <?php
+declare(strict_types=1);
 
 namespace d3yii2\d3printeripp\logic;
-
-use d3yii2\d3printer\models\AlertSettings as AlertSettingsModel;
-use d3yii2\d3printeripp\logic\PrinterConfig;
 
 /**
  * Class AlertConfig
@@ -25,7 +23,6 @@ class AlertConfig
 
     /**
      * AlertConfig constructor.
-     * @param PrinterConfig $printerConfig
      */
     public function __construct(PrinterConfig $printerConfig)
     {
@@ -52,21 +49,33 @@ class AlertConfig
         $this->emailTemplate = $alertSettings['emailTemplate'] ?? 'This is alert about the Printer %s ';
     }
 
+    /**
+     * @return string
+     */
     public function getDocumentSize(): string
     {
         return $this->paperSize;
     }
 
+    /**
+     * @return string
+     */
     public function getPaperType(): string
     {
         return $this->paperType;
     }
 
+    /**
+     * @return string
+     */
     public function getSleepAfter(): string
     {
         return $this->sleepAfter;
     }
 
+    /**
+     * @return string
+     */
     public function getPrintOrientation(): string
     {
         return $this->printOrientation;

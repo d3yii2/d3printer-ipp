@@ -50,7 +50,11 @@ class PrinterAttributes
         if ($this->attributes) {
             return $this->attributes;
         }
-        $responsePayload = Request::get($this->printerConfig, \obray\ipp\types\Operation::GET_PRINTER_ATTRIBUTES);
+        $responsePayload = Request::get(
+            $this->printerConfig,
+            \obray\ipp\types\Operation::GET_PRINTER_ATTRIBUTES,
+            $this->printerConfig->getCurlOptions()
+        );
         $printerAttributes = $responsePayload->printerAttributes ?? null;
         if (!empty($printerAttributes[0]) && $printerAttributes[0] instanceof IPPPrinterAttributes) {
             $this->attributes = $printerAttributes[0];

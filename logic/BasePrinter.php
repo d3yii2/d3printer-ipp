@@ -63,10 +63,7 @@ abstract class BasePrinter implements PrinterInterface
         $this->system = new PrinterSystem($this->config, $alertConfig, $this->attributes);
         $this->daemon = new PrinterDaemon($this->config);
         $this->spooler = new PrinterSpooler($this->config);
-
-        $this->attributes->getAll(); // Initialize attributes
-
-        $this->supplies = new PrinterSupplies($this->config, $this->attributes);
+        $this->supplies = new PrinterSupplies($this->config, $this->attributes, $alertConfig);
         $this->jobs = new PrinterJobs($this->config, $this->client);
         $this->cache = new PrinterCache($this->config);
     }
@@ -108,7 +105,7 @@ abstract class BasePrinter implements PrinterInterface
 
     public function getFtpStatus()
     {
-        return $this->spooler->existDeadFile() ? 'ok' : 'down';
+        return $this->spooler->deadFileExists() ? ValueFormatter::UP : ValueFormatter::DOWN;
     }
 
     public function getSpoolerStatus()
@@ -153,6 +150,8 @@ abstract class BasePrinter implements PrinterInterface
 
     private function generateCurrentStats(): array
     {
+        $this->attributes->getAll();
+
         return [
             'lastChecked' => time(),
             self::STATUS_DAEMON => $this->getDaemonStatus(),
@@ -161,6 +160,15 @@ abstract class BasePrinter implements PrinterInterface
             self::STATUS_SUPPLIES => $this->getSuppliesStatus(),
             self::STATUS_SYSTEM => $this->getSystemStatus()
         ];
+    }
+
+    /**
+     * @return void
+     * @throws Exception
+     */
+    public function loadPrinterAttributes()
+    {
+        $this->attributes->getAll(); // Request and load attributes from the printer
     }
 
     public function getSystemStatus()
