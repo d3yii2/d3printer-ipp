@@ -14,8 +14,8 @@ Add the component to your `config/web.php`:
 
 ```php
 'components' => [
-    'printerManager' => [
-        'class' => 'app\components\PrinterManagerComponent',
+    'printerIPP' => [
+        'class' => 'app\components\PrinterIPP',
         'autoConnect' => false,
         'healthCheckInterval' => 300, // 5 minutes
         'printers' => [
@@ -55,7 +55,7 @@ Add the component to your `config/web.php`:
 // In your controller
 public function actionPrint()
 {
-    $printerManager = \Yii::$app->printerManager;
+    $printerIPP = \Yii::$app->printerIPP;
     
     // Load document (PDF, PostScript, etc.)
     $document = file_get_contents('/path/to/document.pdf');
@@ -70,7 +70,7 @@ public function actionPrint()
     ];
     
     try {
-        $result = $printerManager->print('office_hp_laser', $document, $options);
+        $result = $printerIPP->print('office_hp_laser', $document, $options);
         
         if ($result['success']) {
             return $this->asJson([
@@ -94,8 +94,8 @@ public function actionPrint()
 // Check all printers health
 public function actionHealthDashboard()
 {
-    $printerManager = \Yii::$app->printerManager;
-    $health = $printerManager->getHealthStatus();
+    $printerIPP = \Yii::$app->printerIPP;
+    $health = $printerIPP->getHealthStatus();
     
     $summary = [];
     foreach ($health as $name => $status) {
@@ -130,7 +130,7 @@ private function formatSupplies(array $supplies): array
 // Get printer jobs
 public function actionJobs($printerName)
 {
-    $printer = \Yii::$app->printerManager->getPrinter($printerName);
+    $printer = \Yii::$app->printerIPP->getPrinter($printerName);
     
     if (!$printer) {
         throw new NotFoundHttpException('Printer not found');
@@ -147,7 +147,7 @@ public function actionJobs($printerName)
 // Cancel job
 public function actionCancelJob($printerName, $jobId)
 {
-    $printer = \Yii::$app->printerManager->getPrinter($printerName);
+    $printer = \Yii::$app->printerIPP->getPrinter($printerName);
     $success = $printer->cancelJob((int)$jobId);
     
     return $this->asJson([
@@ -171,11 +171,11 @@ public function actionAddPrinter()
         'password' => 'printer_pass'
     ];
     
-    $printerManager = \Yii::$app->printerManager;
-    $printerManager->addPrinter('new_printer', $config);
+    $printerIPP = \Yii::$app->printerIPP;
+    $printerIPP->addPrinter('new_printer', $config);
     
     // Test connection
-    $printer = $printerManager->getPrinter('new_printer');
+    $printer = $printerIPP->getPrinter('new_printer');
     $connected = $printer->connect();
     
     return $this->asJson([
@@ -196,10 +196,10 @@ Different printer types (HP, Canon, Generic) implement the same `PrinterInterfac
 `PrinterFactory` creates appropriate printer instances based on configuration.
 
 ### 3. **Manager Pattern**
-`PrinterManager` orchestrates multiple printers and provides unified access.
+`printerIPP` orchestrates multiple printers and provides unified access.
 
 ### 4. **Component Pattern**
-Yii2 integration through `PrinterManagerComponent` for dependency injection.
+Yii2 integration through `PrinterIPP` for dependency injection.
 
 ## Extending the Package
 
@@ -291,7 +291,7 @@ The package provides comprehensive error handling:
 
 ```php
 try {
-    $result = $printerManager->print('printer_name', $document, $options);
+    $result = $printerIPP->print('printer_name', $document, $options);
 } catch (\InvalidArgumentException $e) {
     // Configuration or parameter errors
     \Yii::error("Printer configuration error: " . $e->getMessage());
@@ -305,11 +305,11 @@ try {
 
 ```php
 // Basic printer connectivity test
-$printer = \Yii::$app->printerManager->getPrinter('test_printer');
+$printer = \Yii::$app->printerIPP->getPrinter('test_printer');
 $isOnline = $printer->isOnline();
 
 // Health check test
-$health = \Yii::$app->printerManager->getHealthStatus(true);
+$health = \Yii::$app->printerIPP->getHealthStatus(true);
 foreach ($health as $name => $status) {
     if (!$status['online']) {
         \Yii::warning("Printer {$name} is offline");

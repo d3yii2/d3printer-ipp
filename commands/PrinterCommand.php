@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace d3yii2\d3printeripp\commands;
 
-use d3yii2\d3printeripp\components\PrinterIPPComponent;
+use d3yii2\d3printeripp\components\PrinterIPP;
 use d3yii2\d3printeripp\types\PrinterAttributes;
 use d3yii2\d3printeripp\logic\printers\HPPrinter;
 use yii\base\Exception;
@@ -15,7 +15,7 @@ use yii\console\Controller;
  */
 class PrinterCommand extends Controller
 {
-    private PrinterIPPComponent $printerManager;
+    private PrinterIPP $printerIPP;
 
     /**
      * {@inheritdoc}
@@ -23,7 +23,7 @@ class PrinterCommand extends Controller
      */
     public function init()
     {
-        $this->printerManager = Yii::$app->printerManager;
+        $this->printerIPP = Yii::$app->printerIPP;
     }
 
     /**
@@ -32,7 +32,7 @@ class PrinterCommand extends Controller
     public function actionHealthAll()
     {
         try {
-            $health = $this->printerManager->getStatusAll(true); // Force refresh
+            $health = $this->printerIPP->getStatusAll(true); // Force refresh
 
             foreach ($health as $printerName => $status) {
                 print_r($status);
@@ -61,7 +61,7 @@ class PrinterCommand extends Controller
 
     public function actionHealth(?string $slug)
     {
-        $health = $this->printerManager->getHealthStatus($slug, true); // Force refresh
+        $health = $this->printerIPP->getHealthStatus($slug, true); // Force refresh
 
         print_r($status);
         $this->stdout("Printer: {$printerName}\n");
@@ -104,13 +104,13 @@ class PrinterCommand extends Controller
             'media-size-name' => 'iso_a4_210x297mm',
         ];
 
-        $printer = isset($this->printerManager->printers[$slug]);
+        $printer = isset($this->printerIPP->printers[$slug]);
 
         if (!$printer) {
             throw new Exception('Printer: ' . $slug . ' is not configured in App!');
         }
 
-        $result = $this->printerManager->print($slug, $testDocument, $options);
+        $result = $this->printerIPP->print($slug, $testDocument, $options);
         
         $this->stdout("Printer: {$slug}\n");
         if (isset($result['success'])) {

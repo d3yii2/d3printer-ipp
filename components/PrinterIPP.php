@@ -9,7 +9,6 @@ use Yii;
 use yii\base\Component;
 use yii\base\Exception;
 use yii\base\InvalidConfigException;
-use d3yii2\d3printeripp\logic\PrinterManager;
 use d3yii2\d3printeripp\logic\PrinterFactory;
 
 /**
@@ -19,7 +18,7 @@ use d3yii2\d3printeripp\logic\PrinterFactory;
  *
  * 'components' => [
  *     'printerIPP' => [
- *         'class' => 'd3yii2\d3printeripp\components\PrinterIPPComponent',
+ *         'class' => 'd3yii2\d3printeripp\components\PrinterIPP',
  *         'printers' => [
  *             'office_hp' => [
  *                 'name' => 'Office HP printer',
@@ -42,7 +41,7 @@ use d3yii2\d3printeripp\logic\PrinterFactory;
  *     ]
  * ]
  */
-class PrinterIPPComponent extends Component
+class PrinterIPP extends Component
 {
     private const STATUS_SUCCESS = 'success';
     private const STATUS_ERROR = 'error';

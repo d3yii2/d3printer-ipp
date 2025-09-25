@@ -18,7 +18,7 @@ class PrinterController extends \yii\web\Controller
     {
         try {
             // Get the printer manager component
-            $printerManager = Yii::$app->printerManager;
+            $printerIPP = Yii::$app->printerIPP;
 
             // Example document content (could be PDF, PostScript, etc.)
             $document = file_get_contents('/path/to/document.pdf');
@@ -32,7 +32,7 @@ class PrinterController extends \yii\web\Controller
             ];
 
             // Print to specific printer
-            $result = $printerManager->print('office_hp', $document, $options);
+            $result = $printerIPP->print('office_hp', $document, $options);
 
             if ($result['success']) {
                 return $this->asJson([
@@ -60,8 +60,8 @@ class PrinterController extends \yii\web\Controller
      */
     public function actionHealth(string $slug)
     {
-        $printerManager = Yii::$app->printerManager;
-        $health = $printerManager->getHealthStatus($slug);
+        $printerIPP = Yii::$app->printerIPP;
+        $health = $printerIPP->getHealthStatus($slug);
 
         return $this->asJson($health);
     }
@@ -72,8 +72,8 @@ class PrinterController extends \yii\web\Controller
      */
     public function actionStatus($slug): \yii\web\Response
     {
-        $printerManager = Yii::$app->printerManager;
-        $printer = $printerManager->getPrinter($slug);
+        $printerIPP = Yii::$app->printerIPP;
+        $printer = $printerIPP->getPrinter($slug);
 
         if (!$printer) {
             throw new \yii\web\NotFoundHttpException("Printer not found");
@@ -104,8 +104,8 @@ class PrinterController extends \yii\web\Controller
      */
     public function actionCancelJob($slug, $jobId): \yii\web\Response
     {
-        $printerManager = Yii::$app->printerManager;
-        $printer = $printerManager->getPrinter($slug);
+        $printerIPP = Yii::$app->printerIPP;
+        $printer = $printerIPP->getPrinter($slug);
 
         if (!$printer) {
             throw new \yii\web\NotFoundHttpException('Printer not found');

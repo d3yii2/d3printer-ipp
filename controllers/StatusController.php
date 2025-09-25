@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace d3yii2\d3printeripp\controllers;
 
-use d3yii2\d3printeripp\components\PrinterIPPComponent;
+use d3yii2\d3printeripp\components\PrinterIPP;
 use Exception;
 use Yii;
 use yii\web\Controller;
@@ -14,7 +14,7 @@ use yii\web\Response;
  */
 class StatusController extends Controller
 {
-    private ?PrinterIPPComponent $printerManager = null;
+    private ?PrinterIPP $printerIPP = null;
 
     public $enableCsrfValidation = false;
 
@@ -27,7 +27,7 @@ class StatusController extends Controller
         try {
             parent::init();
 
-            $this->printerManager = Yii::$app->printerManager;
+            $this->printerIPP = Yii::$app->printerIPP;
             Yii::$app->response->formatters[Response::FORMAT_JSON] = [
                 'class' => 'yii\web\JsonResponseFormatter',
             ];
@@ -50,14 +50,14 @@ class StatusController extends Controller
             return $response;
         }
 
-        if (!$this->printerManager) {
+        if (!$this->printerIPP) {
             $response['status'] = 'error';
             $response['message'] = 'Failed to initialize Printer';
             return $response;
         }
 
         try {
-            $printer = $this->printerManager->getPrinter($printerSlug);
+            $printer = $this->printerIPP->getPrinter($printerSlug);
 
             if (!$printer) {
                 $response['status'] = 'error';
