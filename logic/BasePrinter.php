@@ -32,12 +32,15 @@ abstract class BasePrinter implements PrinterInterface
     protected ?IPPPayload $responsePayload = null;
     protected ?string $lastError = null;
 
+    public const STATUS_PRINTER_ATTRIBUTES = 'attributes';
     public const STATUS_HEALTH = 'health';
+    public const STATUS_JOBS = 'jobs';
     public const STATUS_DAEMON = 'daemon';
     public const STATUS_SPOOLER = 'spooler';
     public const STATUS_SYSTEM = 'system';
     public const STATUS_SUPPLIES = 'supplies';
     public const STATUS_FTP = 'ftp';
+    public const STATUS_ERRORS = 'errors';
 
     public function __construct(PrinterConfig $config)
     {
@@ -133,6 +136,61 @@ abstract class BasePrinter implements PrinterInterface
         return $stats;
     }
 
+    public function getStatusData()
+    {
+        $systemStatus = $this->getFullStatus();
+        $systemLabels = $this->system->getLabels();
+
+        return [
+            [
+                'label' => PrinterIPP::getLabel($systemLabels[PrinterSystem::STATUS_HOST]),
+                'value' => isset($systemStatus)
+                    ? ValueFormatter::coloredUpDownValue($status['system']['state'])
+                    : '?',
+            ],
+            [
+                'label' => Yii::t('d3printeripp', 'Cartridge'),
+                'value' => isset($status['supplies']['level'])
+                    ? ValueFormatter::coloredDangerLessValue(
+                        $status['supplies']['level'],
+                        50, //$status['supplies']['lowLevel']
+                    ) . '%'
+                    : '?',
+            ],
+            [
+                'label' => Yii::t('d3printeripp', 'Drum'),
+                'value' => isset($status['supplies']['drum']) && isset($status['supplies']['lowDrum'])
+                    ? ValueFormatter::coloredDangerLessValue(
+                        $status['supplies']['drum'],
+                        $status['supplies']['lowDrum']
+                    ) . '%'
+                    : '?',
+            ],
+            [
+                'label' => Yii::t('d3printeripp', 'FTP status'),
+                'value' => isset($status['ftp'])
+                    ? ValueFormatter::coloredUpDownValue($status['ftp'])
+                    : '?',
+            ],
+            [
+                'label' => Yii::t('d3printeripp', 'Spooler'),
+                'value' => isset($status['spooler']['filesCount'])
+                    ? ValueFormatter::coloredDangerMoreValue($status['spooler']['filesCount'], 1)
+                    : '',
+            ],
+            [
+                'label' => Yii::t('d3printeripp', 'IP'),
+                'value' => $status['system']['host'] ?? '?',
+            ],
+            [
+                'label' => Yii::t('d3printeripp', 'Daemon Status'),
+                'value' => isset($status['daemon']['status'])
+                    ? ValueFormatter::coloredUpDownValue($status['daemon']['status'])
+                    : '?',
+            ],
+        ];
+    }
+
     private function getCachedStatsIfValid(): ?array
     {
         $cachedStats = $this->cache->getData('stats');
@@ -150,16 +208,27 @@ abstract class BasePrinter implements PrinterInterface
 
     private function generateCurrentStats(): array
     {
-        $this->attributes->getAll();
 
         return [
             'lastChecked' => time(),
+            self::STATUS_PRINTER_ATTRIBUTES => $this->getPrinterAttributesStatus(),
             self::STATUS_DAEMON => $this->getDaemonStatus(),
             self::STATUS_FTP => $this->getFtpStatus(),
             self::STATUS_SPOOLER => $this->getSpoolerStatus(),
             self::STATUS_SUPPLIES => $this->getSuppliesStatus(),
-            self::STATUS_SYSTEM => $this->getSystemStatus()
+            self::STATUS_SYSTEM => $this->getSystemStatus(),
+            self::STATUS_JOBS => $this->getJobsStatus(),
         ];
+    }
+    
+    public function getPrinterAttributesStatus(): array
+    {
+        return $this->getStatus(self::STATUS_PRINTER_ATTRIBUTES);
+    }
+
+    public function getJobsStatus(): array
+    {
+        return $this->getStatus(self::STATUS_JOBS);
     }
 
     /**

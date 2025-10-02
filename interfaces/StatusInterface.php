@@ -11,4 +11,5 @@ interface StatusInterface
      * @return array
      */
     public function getStatus(): array;
+    public function getErrors(): array;
 }

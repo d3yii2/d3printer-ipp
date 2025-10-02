@@ -18,13 +18,21 @@ class PrinterSupplies implements StatusInterface
     private const LEVEL_LOW_THRESHOLD = '10';
     private const LEVEL_MEDIUM_THRESHOLD = '25';
 
-    private const STATUS_UNKNOWN = 'unknown';
-    private const STATUS_LOW = 'low';
-    private const STATUS_MEDIUM = 'medium';
+    private const SUPPLY_STATUS_UNKNOWN = 'unknown';
+    private const SUPPLY_STATUS_LOW = 'low';
+    private const SUPPLY_STATUS_MEDIUM = 'medium';
+
+    public const STATUS_MARKER_NAME = 'marker-name';
+    public const STATUS_MARKER_LEVEL = 'marker-level';
+    public const STATUS_MARKER_COLOR = 'marker-color';
+    public const STATUS_MARKER_TYPE = 'marker-type';
+    public const STATUS_DOCUMENT_SIZE = 'document-size';
 
     protected PrinterConfig $printerConfig;
     protected PrinterAttributes $printerAttributes;
     protected AlertConfig $alertConfig;
+
+    private array $errors = [];
 
     /**
      * @param PrinterConfig $printerConfig
@@ -52,11 +60,12 @@ class PrinterSupplies implements StatusInterface
         $markerType = $this->printerAttributes->getMarkerTypes();
 
         return [
-            'name' => $markerName,
-            'color' => $markerColor,
-            'type' => $markerType,
-            'level' => $this->getSupplyStatus($markerLevel),
-            'documentSize' => $this->printerAttributes->getDocumentSize()
+            self::STATUS_MARKER_NAME => $markerName,
+            self::STATUS_MARKER_COLOR => $markerColor,
+            self::STATUS_MARKER_TYPE => $markerType,
+            self::STATUS_MARKER_LEVEL => $this->getSupplyStatus($markerLevel),
+            self::STATUS_DOCUMENT_SIZE => $this->printerAttributes->getDocumentSize(),
+            'errors' => $this->getErrors(),
         ];
     }
 
@@ -113,17 +122,25 @@ class PrinterSupplies implements StatusInterface
     protected function getSupplyStatus(string $level): string
     {
         if (in_array($level, [self::LEVEL_UNKNOWN_1, self::LEVEL_UNKNOWN_2, self::LEVEL_UNKNOWN_3])) {
-            return self::STATUS_UNKNOWN;
+            return self::SUPPLY_STATUS_UNKNOWN;
         }
 
         if ($level <= self::LEVEL_LOW_THRESHOLD) {
-            return self::STATUS_LOW;
+            return self::SUPPLY_STATUS_LOW;
         }
 
         if ($level <= self::LEVEL_MEDIUM_THRESHOLD) {
-            return self::STATUS_MEDIUM;
+            return self::SUPPLY_STATUS_MEDIUM;
         }
 
         return $level;
+    }
+
+    /**
+     * @return array
+     */
+    public function getErrors(): array
+    {
+        return $this->errors;
     }
 }

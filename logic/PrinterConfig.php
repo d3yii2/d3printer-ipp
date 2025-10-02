@@ -29,6 +29,7 @@ class PrinterConfig
     private array $jobAttributes;
     private array $additionalSettings;
     private array $curlOptions;
+    private array $gatherStates;
 
     public function __construct(array $config)
     {
@@ -53,6 +54,10 @@ class PrinterConfig
         $this->jobAttributes = $config['jobAttributes'] ?? [];
         $this->curlOptions = $config['curlOptions'] ?? [];
         $this->additionalSettings = $config['additional'] ?? [];
+        $this->gatherStates = $config['gatherStates'] ?? [
+            'PrinterSystem' => [PrinterSystem::STATUS_UP_DOWN, PrinterSystem::STATUS_HOST],
+            'PrinterSupplies' => [PrinterSupplies::STATUS_MARKER_LEVEL],
+        ];
     }
 
     // Getters
@@ -72,6 +77,7 @@ class PrinterConfig
     public function getJobAttributes(): array { return $this->jobAttributes; }
     public function getCurlOptions(): array { return $this->curlOptions; }
     public function getAdditionalSettings(): array { return $this->additionalSettings; }
+    public function getGatherStates(): array { return $this->gatherStates; }
 
     public function getUri(): string
     {

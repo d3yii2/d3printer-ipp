@@ -23,6 +23,17 @@ class PrinterSystem implements StatusInterface
         PrinterState::processing => 'processing',
     ];
 
+    private array $errors = [];
+
+    public const STATUS_HOST = 'host';
+    public const STATUS_INFO = 'info';
+    public const STATUS_NAME = 'name';
+    public const STATUS_MODEL = 'model';
+    public const STATUS_DEVICE_URI = 'device-uri';
+    public const STATUS_LOCATION = 'location';
+    public const STATUS_STATE_NAME = 'state-name';
+    public const STATUS_UP_DOWN = 'up-down';
+
     public function __construct(
         PrinterConfig $printerConfig,
         AlertConfig $alertConfig,
@@ -40,32 +51,83 @@ class PrinterSystem implements StatusInterface
      */
     public function getStatus(): array
     {
-        $printerData = $this->gatherPrinterData();
+        $gatherStates = $this->printerConfig->getGatherStates();
 
-        return [
-            'info' => $printerData['info'],
-            'name' => $this->printerConfig->getName(),
-            'model' => $printerData['model'],
-            'location' => $printerData['location'],
-            'deviceUri' => $printerData['deviceUri'],
-            'host' => $printerData['host'],
-            'state' => $this->getStateName($printerData['state']),
-            'status' => PrinterSystem::isAlive($printerData['state']) ? ValueFormatter::UP : ValueFormatter::DOWN,
-        ];
+        if (empty($gatherStates['PrinterSystem'])) {
+            return [];
+        }
+
+        $gatherStates = $gatherStates['PrinterSystem'];
+
+        // Make request to printer to get all attributes if needed
+        if (
+            in_array(self::STATUS_INFO,  $gatherStates)
+            || in_array(self::STATUS_MODEL,  $gatherStates)
+            || in_array(self::STATUS_LOCATION,  $gatherStates)
+            || in_array(self::STATUS_STATE_NAME,  $gatherStates)
+            || in_array(self::STATUS_UP_DOWN,  $gatherStates)
+        ) {
+            $this->printerAttributes->getAll();
+        }
+
+        $returnStates = [];
+
+        if (in_array(self::STATUS_NAME, $gatherStates)) {
+            $returnStates[self::STATUS_NAME] = $this->printerConfig->getName();
+        }
+
+        if (in_array(self::STATUS_HOST, $gatherStates)) {
+            $returnStates[self::STATUS_HOST] = $this->printerConfig->getHost();
+        }
+
+        if (in_array(self::STATUS_INFO, $gatherStates)) {
+            $returnStates[self::STATUS_INFO] = $this->printerAttributes->getPrinterInfo();
+        }
+
+        if (in_array(self::STATUS_MODEL, $gatherStates)) {
+            $returnStates[self::STATUS_MODEL] = $this->printerAttributes->getPrinterMakeAndModel();
+        }
+
+        if (in_array(self::STATUS_LOCATION, $gatherStates)) {
+            $returnStates[self::STATUS_LOCATION] = $this->printerAttributes->getPrinterLocation();
+        }
+
+        if (in_array(self::STATUS_DEVICE_URI, $gatherStates)) {
+            $returnStates[self::STATUS_DEVICE_URI] = $this->printerConfig->getUri();
+        }
+
+        if (in_array(self::STATUS_STATE_NAME, $gatherStates)) {
+            $returnStates[self::STATUS_STATE_NAME] = $this->getStateName($this->printerAttributes->getPrinterState());
+        }
+
+        if (in_array(self::STATUS_UP_DOWN, $gatherStates)) {
+
+            $stateName = $this->getStateName($this->printerAttributes->getPrinterState());
+
+            $returnStates[self::STATUS_UP_DOWN] = PrinterSystem::isAlive($stateName)
+                ? ValueFormatter::UP
+                : ValueFormatter::DOWN;
+        }
+
+        $returnStates['errors'] = $this->getErrors();
+        
+        return $returnStates;
     }
 
-    /**@return array{host: null|string, info: string, model: string, location: string, deviceUri: string, state: string}
-     * @throws Exception
+    /**
+     * @return string[]
      */
-    private function gatherPrinterData(): array
+    public function getLabels(): array
     {
         return [
-            'host' => $this->printerConfig->getHost(),
-            'info' => $this->printerAttributes->getPrinterInfo(),
-            'model' => $this->printerAttributes->getPrinterMakeAndModel(),
-            'location' => $this->printerAttributes->getPrinterLocation(),
-            'deviceUri' => $this->printerConfig->getUri(),
-            'state' => $this->printerAttributes->getPrinterState()
+            self::STATUS_NAME => 'Name',
+            self::STATUS_HOST => 'Host',
+            self::STATUS_INFO => 'Info',
+            self::STATUS_MODEL => 'Model',
+            self::STATUS_DEVICE_URI => 'Device URI',
+            self::STATUS_LOCATION => 'Location',
+            self::STATUS_STATE_NAME => 'State',
+            self::STATUS_UP_DOWN => 'Up/Down',
         ];
     }
 
@@ -86,5 +148,13 @@ class PrinterSystem implements StatusInterface
     {
         // idle|processing|stopped
         return $state != PrinterState::stopped;
+    }
+
+    /**
+     * @return array
+     */
+    public function getErrors(): array
+    {
+        return $this->errors;
     }
 }

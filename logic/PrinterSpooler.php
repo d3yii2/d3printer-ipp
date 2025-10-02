@@ -27,6 +27,8 @@ class PrinterSpooler implements StatusInterface
     protected PrinterConfig $printerConfig;
     protected string $baseDirectory = self::DEFAULT_BASE_DIRECTORY;
 
+    private array $errors = [];
+
     /**
      * @param PrinterConfig $config
      */
@@ -45,6 +47,7 @@ class PrinterSpooler implements StatusInterface
             'path' => $this->getSpoolDirectory(),
             'filesCount' => $this->getSpoolFilesCount(),
             'deadFileExists' => $this->deadFileExists() ? ValueFormatter::YES : ValueFormatter::NO,
+            'errors' => $this->getErrors()
         ];
     }
 
@@ -63,7 +66,12 @@ class PrinterSpooler implements StatusInterface
         for ($i = 1; $i <= $copies; $i++) {
             $destinationFile = $spoolDirectoryPath . '/' . $pathInfo['filename'] . $i . '.' . $pathInfo['extension'];
             if (!copy($filepath, $destinationFile)) {
-                throw new Exception("Failed to copy file to spool directory: $destinationFile");
+                
+                $error = "Failed to copy file to spool directory: $destinationFile";
+                
+                $this->errors[] = $error;
+                
+                throw new Exception($error);
             }
         }
 
@@ -80,8 +88,12 @@ class PrinterSpooler implements StatusInterface
 
         for ($i = 1; $i <= $copies; $i++) {
             $destinationFile = $spoolDirectoryPath . '/' . $timestamp . '_' . $i . self::DEAD_FILE_EXTENSION;
+            
             if (!file_put_contents($destinationFile, $fileData)) {
-                throw new Exception("Failed to save file to spool directory: $destinationFile");
+                
+                $this->errors[] = "Failed to save file to spool directory: $destinationFile";
+                
+                throw new Exception($error);
             }
         }
 
@@ -152,4 +164,13 @@ class PrinterSpooler implements StatusInterface
     {
         return D3FileHelper::fileExist($this->baseDirectory, $this->getDeadFileName());
     }
+
+    /**
+     * @return array
+     */
+    public function getErrors(): array
+    {
+        return $this->errors;
+    }
 }
+

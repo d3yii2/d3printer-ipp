@@ -1,6 +1,7 @@
 <?php
 namespace d3yii2\d3printeripp\logic;
 
+use d3yii2\d3printeripp\interfaces\StatusInterface;
 use d3yii2\d3printeripp\types\PrinterAttributesTypes;
 use obray\ipp\Attribute;
 use obray\ipp\enums\PrinterState;
@@ -19,7 +20,7 @@ use d3yii2\d3printeripp\types\PrinterAttributes as PrinterAttributeType;
  * Supports retrieval of various printer-related data, such as its state, output tray,
  * marker details, and other descriptive metadata.
  */
-class PrinterAttributes
+class PrinterAttributes implements StatusInterface
 {
     private const ATTRIBUTE_KEYS = [
         'marker-levels' => 'marker-levels',
@@ -33,6 +34,8 @@ class PrinterAttributes
 
     protected ?IPPPrinterAttributes $attributes = null;
     protected ?PrinterConfig $printerConfig;
+
+    private array $errors = [];
 
     /**
      * Constructor method for initializing the PrinterConfig.
@@ -50,17 +53,23 @@ class PrinterAttributes
         if ($this->attributes) {
             return $this->attributes;
         }
+        
         $responsePayload = Request::get(
             $this->printerConfig,
             \obray\ipp\types\Operation::GET_PRINTER_ATTRIBUTES,
             $this->printerConfig->getCurlOptions()
         );
-        $printerAttributes = $responsePayload->printerAttributes ?? null;
+        
+        $printerAttributes = null; //$responsePayload->printerAttributes ?? null;
         if (!empty($printerAttributes[0]) && $printerAttributes[0] instanceof IPPPrinterAttributes) {
             $this->attributes = $printerAttributes[0];
             return $this->attributes;
         }
-        throw new Exception('Cannot request Printer attributes');
+        
+        $error = 'Cannot request Printer attributes';
+        $this->errors[] = $error;
+        
+        throw new Exception($error);
     }
 
     /**
@@ -91,11 +100,7 @@ class PrinterAttributes
      */
     private function getStringAttributeValue(string $attributeKey): string
     {
-        try {
-            return (string) $this->getAttributeValue($attributeKey);
-        } catch (\Exception $e) {
-            throw new Exception("Failed to retrieve attribute '{$attributeKey}': " . $e->getMessage());
-        }
+       return (string) $this->getAttributeValue($attributeKey);
     }
 
     /**
@@ -206,5 +211,24 @@ class PrinterAttributes
     {
         // TODO: Implement drum level attribute retrieval
         return $this->getStringAttributeValue('');
+    }
+    
+    public function getStatus(): array
+    {
+        $this->getAll();
+
+        $status = [
+            
+        ];
+        
+        return $status;
+    }
+
+    /**
+     * @return array
+     */
+    public function getErrors(): array
+    {
+        return $this->errors;
     }
 }

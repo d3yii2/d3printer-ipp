@@ -19,6 +19,8 @@ class PrinterDaemon implements StatusInterface
     public const STATUS_UNKNOWN = 'Unknown';
 
     private ?string $rawStatus = null;
+    
+    private array $errors = [];
 
     public function __construct(PrinterConfig $printerConfig)
     {
@@ -31,7 +33,8 @@ class PrinterDaemon implements StatusInterface
     public function getStatus(): array
     {
         return [
-            'status' => $this->getState()
+            'status' => $this->getState(),
+            'errors' => $this->getErrors()
         ];
     }
 
@@ -84,5 +87,13 @@ class PrinterDaemon implements StatusInterface
     public function getRawStatus(): ?string
     {
         return $this->rawStatus;
+    }
+
+    /**
+     * @return array
+     */
+    public function getErrors(): array
+    {
+        return $this->errors;
     }
 }

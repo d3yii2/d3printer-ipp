@@ -18,6 +18,8 @@ class PrinterJobs
     protected PrinterConfig $printerConfig;
     protected IppPrinterClient $client;
 
+    private array $errors = [];
+
     protected const JOB_ID = 'job-id';
     protected const JOB_STATE = 'job-state';
     protected const JOB_STATE_MESSAGE = 'job-state-message';
@@ -60,10 +62,12 @@ class PrinterJobs
                 }
             }
 
-            throw new Exception(
-                'Cannot print after ' . self::MAX_RETRY_ATTEMPTS
-                . ' attempts. Last response: ' . ( $response->statusCode ?? 'unknown' )
-            );
+            $error = 'Cannot print after ' . self::MAX_RETRY_ATTEMPTS . ' attempts. Last response: '
+                . ($response->statusCode ?? 'unknown');
+            
+            $this->errors[] = $error;
+            
+            throw new Exception($error);
         } finally {
             set_time_limit($originalTimeLimit);
         }
@@ -148,5 +152,25 @@ class PrinterJobs
             self::JOB_STATE_REASONS => $jobAttributes[self::JOB_STATE_REASONS]->value ?? null,
             self::JOB_URI => $jobAttributes[self::JOB_URI]->value ?? null,
         ];
+    }
+
+    /**
+     * @return array{path: string, filesCount: int, deadFileExists: string}
+     * @throws Exception
+     */
+    public function getStatus(): array
+    {
+        return [
+            'errors' => $this->getErrors()
+        ];
+    }
+
+
+    /**
+     * @return array
+     */
+    public function getErrors(): array
+    {
+        return $this->errors;
     }
 }

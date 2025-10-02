@@ -224,4 +224,13 @@ class PrinterIPP extends Component
             self::STATUS_LAST_CHECK => date('Y-m-d H:i:s')
         ];
     }
+
+    /**
+     * @param string $key
+     * @return string
+     */
+    public static function getLabel(string $key): string
+    {
+        return  Yii::t('d3printeripp', $key);
+    }
 }
