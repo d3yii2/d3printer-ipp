@@ -54,19 +54,40 @@ class PrinterSupplies implements StatusInterface
      */
     public function getStatus(): array
     {
-        $markerLevel = $this->printerAttributes->getMarkerLevels();
-        $markerColor = $this->printerAttributes->getMarkerColors();
-        $markerName = $this->printerAttributes->getMarkerNames();
-        $markerType = $this->printerAttributes->getMarkerTypes();
+        $gatherStates = $this->printerConfig->getGatherStates();
 
-        return [
-            self::STATUS_MARKER_NAME => $markerName,
-            self::STATUS_MARKER_COLOR => $markerColor,
-            self::STATUS_MARKER_TYPE => $markerType,
-            self::STATUS_MARKER_LEVEL => $this->getSupplyStatus($markerLevel),
-            self::STATUS_DOCUMENT_SIZE => $this->printerAttributes->getDocumentSize(),
-            'errors' => $this->getErrors(),
-        ];
+        if (empty($gatherStates['PrinterSupplies'])) {
+            return [];
+        }
+
+
+        $gatherStates = $gatherStates['PrinterSupplies'];
+
+        $returnStates = ['errors' => $this->getErrors()];
+
+        if (in_array(self::STATUS_MARKER_NAME, $gatherStates)) {
+            $returnStates[self::STATUS_MARKER_NAME] = $this->printerAttributes->getMarkerNames();
+        }
+
+        if (in_array(self::STATUS_MARKER_COLOR, $gatherStates)) {
+            $returnStates[self::STATUS_MARKER_COLOR] = $this->printerAttributes->getMarkerColors();
+        }
+
+        if (in_array(self::STATUS_MARKER_TYPE, $gatherStates)) {
+            $returnStates[self::STATUS_MARKER_TYPE] = $this->printerAttributes->getMarkerTypes();
+        }
+
+        if (in_array(self::STATUS_MARKER_LEVEL, $gatherStates)) {
+            $markerLevel = $this->printerAttributes->getMarkerLevels();
+            $returnStates[self::STATUS_MARKER_LEVEL] = $this->getSupplyStatus($markerLevel);
+        }
+
+        if (in_array(self::STATUS_DOCUMENT_SIZE, $gatherStates)) {
+            $returnStates[self::STATUS_DOCUMENT_SIZE] = $this->printerAttributes->getDocumentSize();
+        }
+
+
+        return $returnStates;
     }
 
     /**

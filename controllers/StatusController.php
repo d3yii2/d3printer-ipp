@@ -91,24 +91,8 @@ class StatusController extends Controller
                             'value' => $status['supplies']['level'],
                         ],
                         [
-                            'label' => Yii::t('d3printeripp', 'Drum'),
-                            'value' => '?'
-                        ],
-                        [
-                            'label' => Yii::t('d3printeripp', 'FTP status'),
-                            'value' => $status['ftp'],
-                        ],
-                        [
-                            'label' => Yii::t('d3printeripp', 'Spooler'),
-                            'value' => $status['spooler']['deadFileExists'] ? 'Dead' : Yii::t('d3printeripp', 'OK'),
-                        ],
-                        [
                             'label' => Yii::t('d3printeripp', 'IP'),
                             'value' => '?',
-                        ],
-                        [
-                            'label' => Yii::t('d3printeripp', 'Daemon Status'),
-                            'value' => $status['daemon']['status'],
                         ],
                     ],
                 ],

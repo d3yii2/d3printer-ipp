@@ -60,7 +60,7 @@ class PrinterAttributes implements StatusInterface
             $this->printerConfig->getCurlOptions()
         );
         
-        $printerAttributes = null; //$responsePayload->printerAttributes ?? null;
+        $printerAttributes = $responsePayload->printerAttributes ?? null;
         if (!empty($printerAttributes[0]) && $printerAttributes[0] instanceof IPPPrinterAttributes) {
             $this->attributes = $printerAttributes[0];
             return $this->attributes;

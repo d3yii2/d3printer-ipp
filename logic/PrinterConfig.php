@@ -55,7 +55,7 @@ class PrinterConfig
         $this->curlOptions = $config['curlOptions'] ?? [];
         $this->additionalSettings = $config['additional'] ?? [];
         $this->gatherStates = $config['gatherStates'] ?? [
-            'PrinterSystem' => [PrinterSystem::STATUS_UP_DOWN, PrinterSystem::STATUS_HOST],
+            'PrinterSystem' => [PrinterSystem::STATUS_NAME, PrinterSystem::STATUS_UP_DOWN, PrinterSystem::STATUS_HOST],
             'PrinterSupplies' => [PrinterSupplies::STATUS_MARKER_LEVEL],
         ];
     }

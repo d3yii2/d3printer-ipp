@@ -24,8 +24,6 @@ abstract class BasePrinter implements PrinterInterface
     protected IppPrinterClient $client;
     protected PrinterAttributes $attributes;
     protected PrinterJobs $jobs;
-    protected PrinterDaemon $daemon;
-    protected PrinterSpooler $spooler;
     protected PrinterSystem $system;
     protected PrinterSupplies $supplies;
     protected PrinterCache $cache;
@@ -35,11 +33,8 @@ abstract class BasePrinter implements PrinterInterface
     public const STATUS_PRINTER_ATTRIBUTES = 'attributes';
     public const STATUS_HEALTH = 'health';
     public const STATUS_JOBS = 'jobs';
-    public const STATUS_DAEMON = 'daemon';
-    public const STATUS_SPOOLER = 'spooler';
     public const STATUS_SYSTEM = 'system';
     public const STATUS_SUPPLIES = 'supplies';
-    public const STATUS_FTP = 'ftp';
     public const STATUS_ERRORS = 'errors';
 
     public function __construct(PrinterConfig $config)
@@ -64,22 +59,11 @@ abstract class BasePrinter implements PrinterInterface
         $this->attributes = new PrinterAttributes($this->config);
         $alertConfig = new AlertConfig($this->config);
         $this->system = new PrinterSystem($this->config, $alertConfig, $this->attributes);
-        $this->daemon = new PrinterDaemon($this->config);
-        $this->spooler = new PrinterSpooler($this->config);
         $this->supplies = new PrinterSupplies($this->config, $this->attributes, $alertConfig);
         $this->jobs = new PrinterJobs($this->config, $this->client);
         $this->cache = new PrinterCache($this->config);
     }
 
-    public function getDaemon(): PrinterDaemon
-    {
-        return $this->daemon;
-    }
-
-    public function getSpooler(): PrinterSpooler
-    {
-        return $this->spooler;
-    }
 
     public function getLastError(): ?string
     {
@@ -106,15 +90,6 @@ abstract class BasePrinter implements PrinterInterface
         return $this->config->getName();
     }
 
-    public function getFtpStatus()
-    {
-        return $this->spooler->deadFileExists() ? ValueFormatter::UP : ValueFormatter::DOWN;
-    }
-
-    public function getSpoolerStatus()
-    {
-        return $this->getStatus(self::STATUS_SPOOLER);
-    }
 
     public function updateCache()
     {
@@ -136,6 +111,13 @@ abstract class BasePrinter implements PrinterInterface
         return $stats;
     }
 
+
+    public function getSystemStatus()
+    {
+        return $this->getStatus(self::STATUS_SYSTEM);
+    }
+
+
     public function getStatusData()
     {
         $systemStatus = $this->getFullStatus();
@@ -156,27 +138,6 @@ abstract class BasePrinter implements PrinterInterface
                         50, //$status['supplies']['lowLevel']
                     ) . '%'
                     : '?',
-            ],
-            [
-                'label' => Yii::t('d3printeripp', 'Drum'),
-                'value' => isset($status['supplies']['drum']) && isset($status['supplies']['lowDrum'])
-                    ? ValueFormatter::coloredDangerLessValue(
-                        $status['supplies']['drum'],
-                        $status['supplies']['lowDrum']
-                    ) . '%'
-                    : '?',
-            ],
-            [
-                'label' => Yii::t('d3printeripp', 'FTP status'),
-                'value' => isset($status['ftp'])
-                    ? ValueFormatter::coloredUpDownValue($status['ftp'])
-                    : '?',
-            ],
-            [
-                'label' => Yii::t('d3printeripp', 'Spooler'),
-                'value' => isset($status['spooler']['filesCount'])
-                    ? ValueFormatter::coloredDangerMoreValue($status['spooler']['filesCount'], 1)
-                    : '',
             ],
             [
                 'label' => Yii::t('d3printeripp', 'IP'),
@@ -212,9 +173,6 @@ abstract class BasePrinter implements PrinterInterface
         return [
             'lastChecked' => time(),
             self::STATUS_PRINTER_ATTRIBUTES => $this->getPrinterAttributesStatus(),
-            self::STATUS_DAEMON => $this->getDaemonStatus(),
-            self::STATUS_FTP => $this->getFtpStatus(),
-            self::STATUS_SPOOLER => $this->getSpoolerStatus(),
             self::STATUS_SUPPLIES => $this->getSuppliesStatus(),
             self::STATUS_SYSTEM => $this->getSystemStatus(),
             self::STATUS_JOBS => $this->getJobsStatus(),
@@ -238,16 +196,6 @@ abstract class BasePrinter implements PrinterInterface
     public function loadPrinterAttributes()
     {
         $this->attributes->getAll(); // Request and load attributes from the printer
-    }
-
-    public function getSystemStatus()
-    {
-        return $this->getStatus(self::STATUS_SYSTEM);
-    }
-
-    public function getDaemonStatus()
-    {
-        return $this->getStatus(self::STATUS_DAEMON);
     }
 
     public function getSuppliesStatus()

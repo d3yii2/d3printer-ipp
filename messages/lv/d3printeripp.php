@@ -4,7 +4,6 @@ return [
     'Cartridge' => 'Kārtridžs',
     'Drum' => 'Drum',
     'Status' => 'Statuss',
-    'FTP status' => 'FTP statuss',
     'Ready' => 'Gaida',
     'Down' => 'Nedarbojas',
     'Unknown' => 'Nezināms',
