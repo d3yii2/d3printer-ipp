@@ -137,7 +137,7 @@ class PrinterIPP extends Component
     /**
      * @throws Exception
      */
-    public function print(string $printerSlug, string $document, array $options = []): array
+    public function printBySlug(string $printerSlug, string $document, array $options = []): array
     {
         $printer = $this->validatePrinterExists($printerSlug);
         $result = ['slug' => $printerSlug];

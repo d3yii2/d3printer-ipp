@@ -110,7 +110,7 @@ class PrinterCommand extends Controller
             throw new Exception('Printer: ' . $slug . ' is not configured in App!');
         }
 
-        $result = $this->printerIPP->print($slug, $testDocument, $options);
+        $result = $this->printerIPP->printBySlug($slug, $testDocument, $options);
         
         $this->stdout("Printer: {$slug}\n");
         if (isset($result['success'])) {

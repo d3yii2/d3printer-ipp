@@ -70,7 +70,7 @@ public function actionPrint()
     ];
     
     try {
-        $result = $printerIPP->print('office_hp_laser', $document, $options);
+        $result = $printerIPP->printBySlug('office_hp_laser', $document, $options);
         
         if ($result['success']) {
             return $this->asJson([
@@ -291,7 +291,7 @@ The package provides comprehensive error handling:
 
 ```php
 try {
-    $result = $printerIPP->print('printer_name', $document, $options);
+    $result = $printerIPP->printBySlug('printer_name', $document, $options);
 } catch (\InvalidArgumentException $e) {
     // Configuration or parameter errors
     \Yii::error("Printer configuration error: " . $e->getMessage());

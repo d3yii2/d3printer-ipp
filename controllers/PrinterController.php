@@ -32,7 +32,7 @@ class PrinterController extends \yii\web\Controller
             ];
 
             // Print to specific printer
-            $result = $printerIPP->print('office_hp', $document, $options);
+            $result = $printerIPP->printBySlug('office_hp', $document, $options);
 
             if ($result['success']) {
                 return $this->asJson([
