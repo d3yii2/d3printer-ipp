@@ -27,7 +27,12 @@ class PrinterCache
     public function __construct(PrinterConfig $config)
     {
         $this->config = $config;
-        $this->cache = Yii::$app->printerIppCache;
+
+
+        $this->cache = new \yii\caching\FileCache;
+
+        $basePath = Yii::$app->basePath;
+        $this->cache->cachePath = $basePath . '/runtime/d3printeripp';
         $this->cache->keyPrefix = $config->getSlug();
         $this->cacheExpire = $config->getCacheDuration() ?? self::DEFAULT_CACHE_DURATION;
     }
