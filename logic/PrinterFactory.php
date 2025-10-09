@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace d3yii2\d3printeripp\logic;
 
+use d3yii2\d3printeripp\logic\printers\GenericIPPPrinter;
 use d3yii2\d3printeripp\logic\printers\HPPrinter;
 use d3yii2\d3printeripp\interfaces\PrinterInterface;
 use InvalidArgumentException;
@@ -13,9 +14,9 @@ use InvalidArgumentException;
 class PrinterFactory
 {
     private static array $printerTypes = [
-        //'generic' => GenericIPPPrinter::class,
+        GenericIPPPrinter::SLUG => GenericIPPPrinter::class,
         //'canon' => CanonPrinter::class,
-        'hp' => HPPrinter::class,
+        HPPrinter::SLUG => HPPrinter::class,
     ];
 
     /**
