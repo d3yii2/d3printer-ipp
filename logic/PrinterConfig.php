@@ -2,6 +2,8 @@
 
 namespace d3yii2\d3printeripp\logic;
 
+use d3yii2\d3printeripp\logic\printers\GenericIPPPrinter;
+
 /**
  * Configuration class for printer settings
  */
@@ -9,9 +11,8 @@ class PrinterConfig
 {
     private const DEFAULT_PORT = 631;
     private const DEFAULT_ENCRYPTION = false;
-    private const DEFAULT_TIMEOUT = 6000;
+    private const DEFAULT_TIMEOUT = 2000;
     private const DEFAULT_CACHE_DURATION = 60;
-    private const DEFAULT_PRINTER_TYPE = 'generic';
 
     private string $slug;
     private string $name;
@@ -43,16 +44,19 @@ class PrinterConfig
         $this->name = $config['name'] ?? null;
         $this->host = $config['host'] ?? null;
         $this->port = $config['port'] ?? self::DEFAULT_PORT;
-        $this->username = $config['username'] ?? null;
-        $this->password = $config['password'] ?? null;
+        $this->username = $config['username'] ?? 'admin';
+        $this->password = $config['password'] ?? '';
         $this->pincode = $config['pincode'] ?? null;
         $this->encryption = $config['encryption'] ?? self::DEFAULT_ENCRYPTION;
         $this->timeout = $config['timeout'] ?? self::DEFAULT_TIMEOUT;
         $this->cacheDuration = $config['cacheDuration'] ?? self::DEFAULT_CACHE_DURATION;
-        $this->printerType = $config['type'] ?? self::DEFAULT_PRINTER_TYPE;
+        $this->printerType = $config['type'] ?? GenericIPPPrinter::SLUG;
         $this->alertSettings = $config['alertSettings'] ?? [];
         $this->jobAttributes = $config['jobAttributes'] ?? [];
-        $this->curlOptions = $config['curlOptions'] ?? [];
+        $this->curlOptions = $config['curlOptions'] ?? [
+            'key' => CURLOPT_TIMEOUT,
+            'value' => 20,
+        ];
         $this->additionalSettings = $config['additional'] ?? [];
         $this->gatherStates = $config['gatherStates'] ?? [
             'PrinterSystem' => [PrinterSystem::STATUS_NAME, PrinterSystem::STATUS_UP_DOWN, PrinterSystem::STATUS_HOST],
