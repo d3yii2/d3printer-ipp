@@ -40,11 +40,9 @@ class PrinterSupplies implements StatusInterface
      * @param AlertConfig $alertConfig
      */
     public function __construct(
-        PrinterConfig $printerConfig,
         PrinterAttributes $printerAttributes,
         AlertConfig $alertConfig
     ) {
-        $this->printerConfig = $printerConfig;
         $this->printerAttributes = $printerAttributes;
         $this->alertConfig = $alertConfig;
     }
@@ -52,16 +50,8 @@ class PrinterSupplies implements StatusInterface
     /**@return array{name: string, color: null|string, type: null|string, level: string, documentSize: string}
      * @throws Exception
      */
-    public function getStatus(): array
+    public function getStatus(array $gatherStates): array
     {
-        $gatherStates = $this->printerConfig->getGatherStates();
-
-        if (empty($gatherStates['PrinterSupplies'])) {
-            return [];
-        }
-
-
-        $gatherStates = $gatherStates['PrinterSupplies'];
 
         $returnStates = ['errors' => $this->getErrors()];
 

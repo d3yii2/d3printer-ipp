@@ -10,6 +10,6 @@ interface StatusInterface
     /**
      * @return array
      */
-    public function getStatus(): array;
+    public function getStatus(array $gatherStates): array;
     public function getErrors(): array;
 }

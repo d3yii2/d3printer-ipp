@@ -3,51 +3,26 @@ declare(strict_types=1);
 
 namespace d3yii2\d3printeripp\logic;
 
+use yii\base\Component;
+
 /**
  * Class AlertConfig
  * @package d3yii2\d3printer\logic\settings
+ *
+ * @property-read string $documentSize
  */
-class AlertConfig
+class AlertConfig extends Component
 {
-    protected PrinterConfig $printerConfig;
-    protected int $cartridgeMinValue;
-    protected int $drumMinValue;
-    protected string $paperSize;
-    protected string $paperType;
-    protected string $printOrientation;
-    protected string $sleepAfter;
-    protected string $emailFrom;
-    protected ?string $emailTo = null;
-    protected string $emailSubject;
-    protected string $emailTemplate;
-
-    /**
-     * AlertConfig constructor.
-     */
-    public function __construct(PrinterConfig $printerConfig)
-    {
-        $this->printerConfig = $printerConfig;
-        $this->initializeSettings();
-    }
-
-    /**
-     * Initialize alert settings with default values
-     */
-    private function initializeSettings(): void
-    {
-        $alertSettings = $this->printerConfig->getAlertSettings() ?? [];
-
-        $this->cartridgeMinValue = $alertSettings['cartridgeMinValue'] ?? 10;
-        $this->drumMinValue = $alertSettings['drumMinValue'] ?? 10;
-        $this->paperSize = $alertSettings['paperSize'] ?? 'A5';
-        $this->paperType = $alertSettings['paperType'] ?? '27';
-        $this->sleepAfter = $alertSettings['sleepAfter'] ?? '15';
-        $this->printOrientation = $alertSettings['printOrientation'] ?? 'Portrait';
-        $this->emailFrom = $alertSettings['emailFrom'] ?? 'system@localhost';
-        $this->emailTo = $alertSettings['emailTo'] ?? null;
-        $this->emailSubject = $alertSettings['emailSubject'] ?? 'Printer ' . $this->printerConfig->getName() . ' Alert';
-        $this->emailTemplate = $alertSettings['emailTemplate'] ?? 'This is alert about the Printer %s ';
-    }
+    public int $cartridgeMinValue = 10;
+    public int $drumMinValue = 10;
+    public string $paperSize = 'A4';
+    public string $paperType = '27';
+    public string $printOrientation = 'Portrait';
+    public string $sleepAfter = '15';
+    public string $emailFrom = 'system@localhost';
+    public ?string $emailTo = null;
+    public ?string $emailSubject = null;
+    public string $emailTemplate = 'This is alert about the Printer %s ';
 
     /**
      * @return string
@@ -116,8 +91,8 @@ class AlertConfig
     /**
      * @return string
      */
-    public function getEmailSubject(): string
+    public function getEmailSubject(string $printerName): string
     {
-        return $this->emailSubject;
+        return $this->emailSubject ?? 'Printer ' . $printerName . ' Alert';
     }
 }

@@ -2,9 +2,9 @@
 declare(strict_types=1);
 
 namespace d3yii2\d3printeripp\components;
+
 use d3yii2\d3printeripp\interfaces\PrinterInterface;
 use d3yii2\d3printeripp\logic\PrinterConfig;
-use d3yii2\d3printeripp\logic\PrinterData;
 use Yii;
 use yii\base\Component;
 use yii\base\Exception;
@@ -40,6 +40,9 @@ use d3yii2\d3printeripp\logic\PrinterFactory;
  *         ]
  *     ]
  * ]
+ *
+ * @property-read array $statusAll
+ * @property-read array $allPrinters
  */
 class PrinterIPP extends Component
 {
@@ -60,15 +63,11 @@ class PrinterIPP extends Component
      * given configuration.
      * @throws InvalidConfigException
      */
-    public function init()
+    public function init(): void
     {
         parent::init();
         if (empty($this->printers)) {
             throw new InvalidConfigException('At least one printer must be configured.');
-        }
-        // Add all configured printers
-        foreach ($this->printers as $config) {
-            $this->addPrinter($config);
         }
     }
 
@@ -80,16 +79,28 @@ class PrinterIPP extends Component
     {
         $printerConfig = new PrinterConfig($config);
         $printer = PrinterFactory::create($printerConfig);
-        $this->instances[$config['slug']] = $printer;
+        $this->instances[$config['printerSlug']] = $printer;
     }
 
     /**
      * @param string $slug
      * @return PrinterInterface|null
+     * @throws InvalidConfigException
      */
     public function getPrinter(string $slug): ?PrinterInterface
     {
-        return $this->instances[$slug] ?? null;
+        if (!isset($this->instances[$slug])) {
+            foreach ($this->printers as $config) {
+                if ($config['printerSlug'] === $slug) {
+                    $this->addPrinter($config);
+                    break;
+                }
+            }
+        }
+        if (!isset($this->instances[$slug])) {
+            throw new InvalidConfigException('Printer: ' . $slug . ' is not set');
+        }
+        return $this->instances[$slug];
     }
 
     /**
@@ -108,19 +119,6 @@ class PrinterIPP extends Component
     {
         return array_keys($this->instances);
     }
-
-    public function getStatusAll(): array
-    {
-        $status = [];
-        foreach ($this->instances as $slug => $printer) {
-            $status[$slug] = $this->executeWithErrorHandling(
-                fn() => $this->getStatus($slug),
-                $this->createErrorStatus('Failed to get printer status')
-            );
-        }
-        return $status;
-    }
-
     /**
      * @throws Exception
      */
@@ -151,20 +149,6 @@ class PrinterIPP extends Component
         ));
     }
 
-    public function printToAll(string $document, array $options = []): array
-    {
-        $results = [];
-        foreach ($this->instances as $slug => $printer) {
-            $results[$slug] = $this->executeWithErrorHandling(
-                fn() => array_merge(
-                    $printer->getJobs()->print($document, $options),
-                    [self::STATUS_SUCCESS => true]
-                ),
-                [self::STATUS_SUCCESS => false]
-            );
-        }
-        return $results;
-    }
 
     /**
      * Get registered printer types
@@ -215,13 +199,15 @@ class PrinterIPP extends Component
     }
 
     /**
+     * @param string $error
      * @return array
      */
-    private function createErrorStatus(): array
+    private function createErrorStatus(string $error): array
     {
         return [
             self::STATUS_ALIVE => false,
-            self::STATUS_LAST_CHECK => date('Y-m-d H:i:s')
+            self::STATUS_LAST_CHECK => date('Y-m-d H:i:s'),
+            self::STATUS_ERROR => $error
         ];
     }
 

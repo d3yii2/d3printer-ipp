@@ -15,7 +15,6 @@ class PrinterFactory
 {
     private static array $printerTypes = [
         GenericIPPPrinter::SLUG => GenericIPPPrinter::class,
-        //'canon' => CanonPrinter::class,
         HPPrinter::SLUG => HPPrinter::class,
     ];
 

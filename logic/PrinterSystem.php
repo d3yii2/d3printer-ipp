@@ -25,21 +25,16 @@ class PrinterSystem implements StatusInterface
 
     private array $errors = [];
 
-    public const STATUS_HOST = 'host';
     public const STATUS_INFO = 'info';
-    public const STATUS_NAME = 'name';
     public const STATUS_MODEL = 'model';
-    public const STATUS_DEVICE_URI = 'device-uri';
     public const STATUS_LOCATION = 'location';
     public const STATUS_STATE_NAME = 'state-name';
     public const STATUS_UP_DOWN = 'up-down';
 
     public function __construct(
-        PrinterConfig $printerConfig,
         AlertConfig $alertConfig,
         PrinterAttributes $printerAttributes
     ) {
-        $this->printerConfig = $printerConfig;
         $this->alertConfig = $alertConfig;
         $this->printerAttributes = $printerAttributes;
     }
@@ -49,15 +44,8 @@ class PrinterSystem implements StatusInterface
      *      host: mixed|null|string, state: string, status: string}
      * @throws Exception
      */
-    public function getStatus(): array
+    public function getStatus(array $gatherStates): array
     {
-        $gatherStates = $this->printerConfig->getGatherStates();
-
-        if (empty($gatherStates['PrinterSystem'])) {
-            return [];
-        }
-
-        $gatherStates = $gatherStates['PrinterSystem'];
 
         // Make request to printer to get all attributes if needed
         if (
@@ -72,14 +60,6 @@ class PrinterSystem implements StatusInterface
 
         $returnStates = [];
 
-        if (in_array(self::STATUS_NAME, $gatherStates)) {
-            $returnStates[self::STATUS_NAME] = $this->printerConfig->getName();
-        }
-
-        if (in_array(self::STATUS_HOST, $gatherStates)) {
-            $returnStates[self::STATUS_HOST] = $this->printerConfig->getHost();
-        }
-
         if (in_array(self::STATUS_INFO, $gatherStates)) {
             $returnStates[self::STATUS_INFO] = $this->printerAttributes->getPrinterInfo();
         }
@@ -90,10 +70,6 @@ class PrinterSystem implements StatusInterface
 
         if (in_array(self::STATUS_LOCATION, $gatherStates)) {
             $returnStates[self::STATUS_LOCATION] = $this->printerAttributes->getPrinterLocation();
-        }
-
-        if (in_array(self::STATUS_DEVICE_URI, $gatherStates)) {
-            $returnStates[self::STATUS_DEVICE_URI] = $this->printerConfig->getUri();
         }
 
         if (in_array(self::STATUS_STATE_NAME, $gatherStates)) {
@@ -120,11 +96,8 @@ class PrinterSystem implements StatusInterface
     public function getLabels(): array
     {
         return [
-            self::STATUS_NAME => 'Name',
-            self::STATUS_HOST => 'Host',
             self::STATUS_INFO => 'Info',
             self::STATUS_MODEL => 'Model',
-            self::STATUS_DEVICE_URI => 'Device URI',
             self::STATUS_LOCATION => 'Location',
             self::STATUS_STATE_NAME => 'State',
             self::STATUS_UP_DOWN => 'Up/Down',

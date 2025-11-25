@@ -2,33 +2,53 @@
 
 namespace d3yii2\d3printeripp\logic;
 
-use d3yii2\d3printeripp\logic\AlertConfig;
+use d3yii2\d3printer\components\Spooler;
 use d3yii2\d3printeripp\logic\cache\PrinterCache;
-use d3yii2\d3printeripp\logic\PrinterAttributes;
-use d3yii2\d3printeripp\logic\PrinterHealth;
-use d3yii2\d3printeripp\logic\PrinterSpooler;
-use d3yii2\d3printeripp\types\PrinterAttributesTypes;
-use obray\ipp\Attribute;
-use obray\ipp\enums\PrinterState;
-use obray\ipp\Printer as IppPrinterClient;
 use d3yii2\d3printeripp\interfaces\PrinterInterface;
 use obray\ipp\transport\IPPPayload;
+use Yii;
 use yii\base\Exception;
+use yii\base\InvalidConfigException;
 
 /**
  * Base abstract class for printer implementations
  */
 abstract class BasePrinter implements PrinterInterface
 {
-    protected PrinterConfig $config;
-    protected IppPrinterClient $client;
-    protected PrinterAttributes $attributes;
+
+    public const PRINTER_SYSTEM = 'PrinterSystem';
+    public const PRINTER_SUPPLIES = 'PrinterSupplies';
+    public string $slug;
+    public string $name;
+    public ?string $daemonName = null;
+    public string $host;
+    public int $port;
+    public ?string $username = null;
+    public ?string $password = null;
+    public ?string $pincode = null;
+    public bool $encryption = false;
+    public int $timeout;
+    public int $cacheDuration;
+    public int $spoolerComponentName;
+    public int $alertConfigComponentName;
+    public int $cacheComponentName;
+    public array $curlOptions;
+    public array $gatherStates = [
+        self::PRINTER_SYSTEM => [PrinterSystem::STATUS_UP_DOWN],
+        self::PRINTER_SUPPLIES => [PrinterSupplies::STATUS_MARKER_LEVEL],
+    ];
+    public array $panel;
+
+
+
+
     protected PrinterJobs $jobs;
     protected PrinterSystem $system;
     protected PrinterSupplies $supplies;
     protected PrinterCache $cache;
     protected ?IPPPayload $responsePayload = null;
     protected ?string $lastError = null;
+    protected ?Spooler $printerSpooler = null;
 
     public const STATUS_PRINTER_ATTRIBUTES = 'attributes';
     public const STATUS_HEALTH = 'health';
@@ -37,42 +57,36 @@ abstract class BasePrinter implements PrinterInterface
     public const STATUS_SUPPLIES = 'supplies';
     public const STATUS_ERRORS = 'errors';
 
-    public function __construct(PrinterConfig $config)
+//    public function __construct(PrinterConfig $config)
+//    {
+//        $this->config = $config;
+//        $this->initializeClient();
+//        $this->initializeComponents();
+//    }
+
+    public function getUsername(): ?string
     {
-        $this->config = $config;
-        $this->initializeClient();
-        $this->initializeComponents();
+        return $this->username;
     }
 
-    private function initializeClient(): void
+    public function getPassword(): ?string
     {
-        $this->client = new IppPrinterClient(
-            $this->config->getUri(),
-            $this->config->getUsername(),
-            $this->config->getPassword(),
-            $this->config->getCurlOptions()
-        );
+        return $this->password;
     }
 
-    private function initializeComponents(): void
+    public function getUri(): string
     {
-        $this->attributes = new PrinterAttributes($this->config);
-        $alertConfig = new AlertConfig($this->config);
-        $this->system = new PrinterSystem($this->config, $alertConfig, $this->attributes);
-        $this->supplies = new PrinterSupplies($this->config, $this->attributes, $alertConfig);
-        $this->jobs = new PrinterJobs($this->config, $this->client);
-        $this->cache = new PrinterCache($this->config);
+        return 'ipp://' . $this->host . ':' . $this->port;
     }
-
 
     public function getLastError(): ?string
     {
         return $this->lastError;
     }
 
-    public function getConfig(): PrinterConfig
+    public function getConfigPanel(): array
     {
-        return $this->config;
+        return $this->panel ?? [];
     }
 
     public function getJobs(): PrinterJobs
@@ -80,34 +94,23 @@ abstract class BasePrinter implements PrinterInterface
         return $this->jobs;
     }
 
-    protected function getClient(): IppPrinterClient
+    /**
+     * @throws Exception
+     * @throws InvalidConfigException
+     */
+    public function getFullStatus(bool $forceRefresh = false): array
     {
-        return $this->client;
-    }
-
-    public function getName()
-    {
-        return $this->config->getName();
-    }
-
-
-    public function updateCache()
-    {
-        $status = $this->getFullStatus();
-        $this->cache->update($status);
-    }
-
-    public function getFullStatus(bool $forceRefresh = false)
-    {
+        /** @var PrinterCache $cache */
+        $cache = Yii::$app->get($this->cacheComponentName, false);
         if (!$forceRefresh) {
-            $cachedStats = $this->getCachedStatsIfValid();
-            if ($cachedStats !== null) {
+            $cachedStats = $cache->getCacheData($this->slug);
+            if ($cachedStats) {
                 return $cachedStats;
             }
         }
 
         $stats = $this->generateCurrentStats();
-        $this->cache->update(['stats' => $stats]);
+        $cache->update($this->slug, $stats);
         return $stats;
     }
 
@@ -125,9 +128,9 @@ abstract class BasePrinter implements PrinterInterface
 
         return [
             [
-                'label' => PrinterIPP::getLabel($systemLabels[PrinterSystem::STATUS_HOST]),
+                'label' => 'HOST',
                 'value' => isset($systemStatus)
-                    ? ValueFormatter::coloredUpDownValue($status['system']['state'])
+                    ? ValueFormatter::coloredUpDownValue($systemStatus['system']['state'])
                     : '?',
             ],
             [
@@ -152,51 +155,34 @@ abstract class BasePrinter implements PrinterInterface
         ];
     }
 
-    private function getCachedStatsIfValid(): ?array
-    {
-        $cachedStats = $this->cache->getData('stats');
-        $lastCheckedTimestamp = $cachedStats['lastChecked'] ?? null;
-
-        if (empty($cachedStats) || !$lastCheckedTimestamp) {
-            return null;
-        }
-
-        $now = time();
-        $isCacheExpired = ($now - $lastCheckedTimestamp) > $this->config->getCacheDuration();
-
-        return $isCacheExpired ? null : $cachedStats;
-    }
-
+    /**
+     * @throws InvalidConfigException
+     * @throws Exception
+     */
     private function generateCurrentStats(): array
     {
+        $attributes = new PrinterAttributes($this);
+        $alertConfig = Yii::$app->get($this->alertConfigComponentName, false);
+        $system = new PrinterSystem($alertConfig, $attributes);
+
+        $this->supplies = new PrinterSupplies($attributes, $alertConfig);
+//        $this->jobs = new PrinterJobs($this->config, $this->client);
 
         return [
             'lastChecked' => time(),
-            self::STATUS_PRINTER_ATTRIBUTES => $this->getPrinterAttributesStatus(),
-            self::STATUS_SUPPLIES => $this->getSuppliesStatus(),
-            self::STATUS_SYSTEM => $this->getSystemStatus(),
-            self::STATUS_JOBS => $this->getJobsStatus(),
+//            self::STATUS_PRINTER_ATTRIBUTES => $this->getPrinterAttributesStatus(),
+            self::STATUS_SUPPLIES => $this->getStatus($this->gatherStates[self::PRINTER_SUPPLIES]),
+            self::STATUS_SYSTEM => $system->getStatus($this->gatherStates[self::PRINTER_SYSTEM]),
+            //self::STATUS_JOBS => $this->getJobsStatus(),
         ];
     }
-    
-    public function getPrinterAttributesStatus(): array
-    {
-        return $this->getStatus(self::STATUS_PRINTER_ATTRIBUTES);
-    }
+
 
     public function getJobsStatus(): array
     {
         return $this->getStatus(self::STATUS_JOBS);
     }
 
-    /**
-     * @return void
-     * @throws Exception
-     */
-    public function loadPrinterAttributes()
-    {
-        $this->attributes->getAll(); // Request and load attributes from the printer
-    }
 
     public function getSuppliesStatus()
     {
@@ -208,13 +194,37 @@ abstract class BasePrinter implements PrinterInterface
         return $this->{$from}->getStatus();
     }
 
-    public function resume(int $jobId): IPPPayload
+    /**
+     * @return Spooler
+     * @throws InvalidConfigException
+     */
+    public function getSpoolerComponent()
     {
-        return $this->client->resumePrinter();
+        if ($this->printerSpooler) {
+            return $this->printerSpooler;
+        }
+        if (!$this->printerSpooler = Yii::$app->get($this->spoolerComponentName, false)) {
+            throw new InvalidConfigException('Printer spooler component not configured');
+        }
+        return $this->printerSpooler;
     }
 
-    public function pause(int $jobId): IPPPayload
+    public function getCurlOptions(): array
     {
-        return $this->client->pausePrinter();
+        return $this->curlOptions;
+    }
+
+    /**
+     * @throws InvalidConfigException
+     */
+    public function printToSpoolDirectory(string $filepath, int $copies = 1)
+    {
+        return $this
+            ->getSpoolerComponent()
+            ->sendToSpooler(
+                $this->slug,
+                $filepath,
+                $copies
+            );
     }
 }

@@ -2,12 +2,12 @@
 namespace d3yii2\d3printeripp\logic\printers;
 
 use d3yii2\d3printeripp\logic\BasePrinter;
-use d3yii2\d3printeripp\interfaces\PrinterInterface;
+use Yii;
 
 /**
  * HP Printer specific implementation
  */
-class HPPrinter extends BasePrinter implements PrinterInterface
+class HPPrinter extends BasePrinter
 {
     public const SLUG = 'hpPrinter';
 
@@ -20,6 +20,8 @@ class HPPrinter extends BasePrinter implements PrinterInterface
         return $this->processHPSupplies($data);
     }
 
+
+
     public function printJob(string $document, array $options = []): array
     {
         // HP-specific print job handling
@@ -27,7 +29,7 @@ class HPPrinter extends BasePrinter implements PrinterInterface
         return parent::printJob($document, $hpOptions);
     }
 
-    private function processhpOptions(array $options = [])
+    private function processhpOptions(array $options = []): array
     {
         return $options;
     }
@@ -43,5 +45,17 @@ class HPPrinter extends BasePrinter implements PrinterInterface
         }
         
         return $supplies;
+    }
+
+    public function getConfigPanel(): array
+    {
+        $panel = parent::getConfigPanel();
+        return [
+            'printerName' => $panel['printerName']??$this->name,
+            'printerAccessUrl' => 'https://'.$this->host,
+            'status' => $panel['status'],
+            'cartridge' => $panel['cartridge'],
+            'ip' => $this->host,
+        ];
     }
 }

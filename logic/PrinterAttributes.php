@@ -1,15 +1,13 @@
 <?php
 namespace d3yii2\d3printeripp\logic;
 
-use d3yii2\d3printeripp\interfaces\StatusInterface;
-use d3yii2\d3printeripp\types\PrinterAttributesTypes;
-use obray\ipp\Attribute;
-use obray\ipp\enums\PrinterState;
-use obray\ipp\Printer as IppPrinterClient;
 use d3yii2\d3printeripp\interfaces\PrinterInterface;
-use obray\ipp\transport\IPPPayload;
+use d3yii2\d3printeripp\interfaces\StatusInterface;
+use obray\ipp\Attribute;
+use obray\ipp\exceptions\AuthenticationError;
+use obray\ipp\exceptions\HTTPError;
+use obray\ipp\types\Operation;
 use yii\base\Exception;
-use d3yii2\d3printeripp\logic\Request;
 use obray\ipp\PrinterAttributes as IPPPrinterAttributes;
 use d3yii2\d3printeripp\types\PrinterAttributes as PrinterAttributeType;
 
@@ -33,20 +31,23 @@ class PrinterAttributes implements StatusInterface
     ];
 
     protected ?IPPPrinterAttributes $attributes = null;
-    protected ?PrinterConfig $printerConfig;
+    protected ?PrinterInterface $printer;
 
     private array $errors = [];
 
     /**
      * Constructor method for initializing the PrinterConfig.
      */
-    public function __construct(PrinterConfig $config)
+    public function __construct(PrinterInterface $printer)
     {
-        $this->printerConfig = $config;
+        $this->printer = $printer;
     }
 
     /**
      * @return IPPPrinterAttributes
+     * @throws Exception
+     * @throws AuthenticationError
+     * @throws HTTPError
      */
     public function getAll(): IPPPrinterAttributes
     {
@@ -55,13 +56,15 @@ class PrinterAttributes implements StatusInterface
         }
         
         $responsePayload = Request::get(
-            $this->printerConfig,
-            \obray\ipp\types\Operation::GET_PRINTER_ATTRIBUTES,
-            $this->printerConfig->getCurlOptions()
+            $this->printer,
+            Operation::GET_PRINTER_ATTRIBUTES
         );
         
         $printerAttributes = $responsePayload->printerAttributes ?? null;
-        if (!empty($printerAttributes[0]) && $printerAttributes[0] instanceof IPPPrinterAttributes) {
+        if ($printerAttributes
+            &&!empty($printerAttributes[0])
+            && $printerAttributes[0] instanceof IPPPrinterAttributes
+        ) {
             $this->attributes = $printerAttributes[0];
             return $this->attributes;
         }
@@ -84,19 +87,16 @@ class PrinterAttributes implements StatusInterface
     /**
      * @param string $key
      * @return mixed
-     * @throws Exception
      */
     public function getAttributeValue(string $key)
     {
-        $attribute = $this->getAttribute($key);
-        return $attribute->getAttributeValue();
+        return $this->getAttribute($key)->getAttributeValue();
     }
 
     /**
      * Generic method to get string attribute values with error handling
      * @param string $attributeKey
      * @return string
-     * @throws Exception
      */
     private function getStringAttributeValue(string $attributeKey): string
     {
@@ -105,7 +105,6 @@ class PrinterAttributes implements StatusInterface
 
     /**
      * @return string
-     * @throws Exception
      */
     public function getPrinterState(): string
     {
@@ -114,7 +113,6 @@ class PrinterAttributes implements StatusInterface
 
     /**
      * @return string
-     * @throws Exception
      */
     public function getPrinterOutputTray(): string
     {
@@ -123,7 +121,6 @@ class PrinterAttributes implements StatusInterface
 
     /**
      * @return string
-     * @throws Exception
      */
     public function getMarkerLevels(): string
     {
@@ -132,7 +129,6 @@ class PrinterAttributes implements StatusInterface
 
     /**
      * @return string
-     * @throws Exception
      */
     public function getMarkerColors(): string
     {
@@ -141,7 +137,6 @@ class PrinterAttributes implements StatusInterface
 
     /**
      * @return string
-     * @throws Exception
      */
     public function getMarkerNames(): string
     {
@@ -150,7 +145,6 @@ class PrinterAttributes implements StatusInterface
 
     /**
      * @return string
-     * @throws Exception
      */
     public function getMarkerTypes(): string
     {
@@ -159,7 +153,6 @@ class PrinterAttributes implements StatusInterface
 
     /**
      * @return string
-     * @throws Exception
      */
     public function getPrinterInfo(): string
     {
@@ -168,7 +161,6 @@ class PrinterAttributes implements StatusInterface
 
     /**
      * @return string
-     * @throws Exception
      */
     public function getPrinterMakeAndModel(): string
     {
@@ -177,7 +169,6 @@ class PrinterAttributes implements StatusInterface
 
     /**
      * @return string
-     * @throws Exception
      */
     public function getPrinterLocation(): string
     {
@@ -186,7 +177,6 @@ class PrinterAttributes implements StatusInterface
 
     /**
      * @return string
-     * @throws Exception
      */
     public function getDocumentSize(): string
     {
@@ -196,7 +186,6 @@ class PrinterAttributes implements StatusInterface
 
     /**
      * @return string
-     * @throws Exception
      */
     public function getPrintOrientation(): string
     {
@@ -205,23 +194,25 @@ class PrinterAttributes implements StatusInterface
 
     /**
      * @return string
-     * @throws Exception
      */
     public function getDrumLevel(): string
     {
         // TODO: Implement drum level attribute retrieval
         return $this->getStringAttributeValue('');
     }
-    
+
+    /**
+     * @throws AuthenticationError
+     * @throws Exception
+     * @throws HTTPError
+     */
     public function getStatus(): array
     {
         $this->getAll();
 
-        $status = [
-            
+        return [
+
         ];
-        
-        return $status;
     }
 
     /**

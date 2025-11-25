@@ -31,6 +31,8 @@ class PrinterConfig
     private array $additionalSettings;
     private array $curlOptions;
     private array $gatherStates;
+    private string $printerSpooler;
+    public array $panel;
 
     public function __construct(array $config)
     {
@@ -39,7 +41,7 @@ class PrinterConfig
 
     private function initializeFromConfig(array $config): void
     {
-        $this->slug = $config['slug'];
+        $this->slug = $config['printerSlug'];
         $this->daemonName = $config['daemonName'] ?? null;
         $this->name = $config['name'] ?? null;
         $this->host = $config['host'] ?? null;
@@ -59,9 +61,11 @@ class PrinterConfig
         ];
         $this->additionalSettings = $config['additional'] ?? [];
         $this->gatherStates = $config['gatherStates'] ?? [
-            'PrinterSystem' => [PrinterSystem::STATUS_NAME, PrinterSystem::STATUS_UP_DOWN, PrinterSystem::STATUS_HOST],
+            'PrinterSystem' => [PrinterSystem::STATUS_UP_DOWN],
             'PrinterSupplies' => [PrinterSupplies::STATUS_MARKER_LEVEL],
         ];
+        $this->printerSpooler = $config['printerSpooler'] ?? '';
+        $this->panel = $config['panel'] ?? [];
     }
 
     // Getters
