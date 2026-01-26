@@ -3,28 +3,21 @@ declare(strict_types=1);
 
 namespace d3yii2\d3printeripp\commands;
 
+use d3system\commands\D3CommandController;
 use d3yii2\d3printeripp\components\PrinterIPP;
 use d3yii2\d3printeripp\types\PrinterAttributes;
 use d3yii2\d3printeripp\logic\printers\HPPrinter;
 use yii\base\Exception;
 use Yii;
 use yii\console\Controller;
+use yii\console\ExitCode;
+use yii\helpers\VarDumper;
 
 /**
  * Example Console Command for printer management
  */
-class PrinterCommand extends Controller
+class PrinterCommand extends D3CommandController
 {
-    private PrinterIPP $printerIPP;
-
-    /**
-     * {@inheritdoc}
-     * @since 2.0.36
-     */
-    public function init()
-    {
-        $this->printerIPP = Yii::$app->printerIPP;
-    }
 
     /**
      * Check all printer health
@@ -61,24 +54,32 @@ class PrinterCommand extends Controller
 
     public function actionHealth(?string $slug)
     {
-        $health = $this->printerIPP->getHealthStatus($slug, true); // Force refresh
-
-        print_r($status);
-        $this->stdout("Printer: {$printerName}\n");
-        $this->stdout("Online: " . ($status['online'] ? 'Yes' : 'No') . "\n");
-
-        if (isset($status['supplies'])) {
-            $this->stdout("Supplies:\n");
-            foreach ($status['supplies'] as $supply) {
-                $this->stdout("  - {$supply['name']}: {$supply['level']}% ({$supply['status']})\n");
-            }
+        if (!Yii::$app->has($slug)) {
+            $this->out('Not found printer component with slug: "' . $slug . '"');
+            return ExitCode::CONFIG;
         }
+        /** @var \d3yii2\d3printeripp\components\HPPrinter $printer */
+        $printer = Yii::$app->get($slug);
+        //$this->out('Printer: ' . $printer->name);
+        $status = $printer->getFullStatus();
+        echo VarDumper::dump($status, 10, true);
 
-        if (isset($status['error'])) {
-            $this->stdout("Error: {$status['error']}\n");
-        }
 
-        $this->stdout("\n");
+//        $this->stdout("Printer: {$printerName}\n");
+//        $this->stdout("Online: " . ($status['online'] ? 'Yes' : 'No') . "\n");
+//
+//        if (isset($status['supplies'])) {
+//            $this->stdout("Supplies:\n");
+//            foreach ($status['supplies'] as $supply) {
+//                $this->stdout("  - {$supply['name']}: {$supply['level']}% ({$supply['status']})\n");
+//            }
+//        }
+//
+//        if (isset($status['error'])) {
+//            $this->stdout("Error: {$status['error']}\n");
+//        }
+//
+//        $this->stdout("\n");
     }
 
     /**

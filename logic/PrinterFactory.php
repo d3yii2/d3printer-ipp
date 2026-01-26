@@ -22,7 +22,8 @@ class PrinterFactory
      * @param PrinterConfig $config
      * @return PrinterInterface
      */
-    public static function create(PrinterConfig $config): PrinterInterface
+    public static function
+    create(PrinterConfig $config): PrinterInterface
     {
         $printerType = $config->getPrinterType();
 

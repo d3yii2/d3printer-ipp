@@ -202,11 +202,12 @@ class PrinterAttributes implements StatusInterface
     }
 
     /**
+     * @param array $gatherStates
      * @throws AuthenticationError
      * @throws Exception
      * @throws HTTPError
      */
-    public function getStatus(): array
+    public function getStatus(array $gatherStates): array
     {
         $this->getAll();
 

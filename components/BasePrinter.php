@@ -1,10 +1,16 @@
 <?php
 
-namespace d3yii2\d3printeripp\logic;
+namespace d3yii2\d3printeripp\components;
 
 use d3yii2\d3printer\components\Spooler;
-use d3yii2\d3printeripp\logic\cache\PrinterCache;
 use d3yii2\d3printeripp\interfaces\PrinterInterface;
+use d3yii2\d3printeripp\logic\AlertConfig;
+use d3yii2\d3printeripp\logic\cache\PrinterCache;
+use d3yii2\d3printeripp\logic\PrinterAttributes;
+use d3yii2\d3printeripp\logic\PrinterJobs;
+use d3yii2\d3printeripp\logic\PrinterSupplies;
+use d3yii2\d3printeripp\logic\PrinterSystem;
+use d3yii2\d3printeripp\logic\ValueFormatter;
 use obray\ipp\transport\IPPPayload;
 use Yii;
 use yii\base\Component;
@@ -32,9 +38,9 @@ class BasePrinter  extends Component implements PrinterInterface
     public int $timeout = 30;
     public int $cacheDuration;
     public string $spoolerComponentName;
-    public int $alertConfigComponentName;
-    public int $cacheComponentName;
-    public array $curlOptions;
+    public ?string $alertConfigComponentName = null;
+    public ?string $cacheComponentName = null;
+    public array $curlOptions = [];
     public array $gatherStates = [
         self::PRINTER_SYSTEM => [PrinterSystem::STATUS_UP_DOWN],
         self::PRINTER_SUPPLIES => [PrinterSupplies::STATUS_MARKER_LEVEL],
@@ -103,16 +109,20 @@ class BasePrinter  extends Component implements PrinterInterface
     public function getFullStatus(bool $forceRefresh = false): array
     {
         /** @var PrinterCache $cache */
-        $cache = Yii::$app->get($this->cacheComponentName, false);
-        if (!$forceRefresh) {
-            $cachedStats = $cache->getCacheData($this->slug);
-            if ($cachedStats) {
+        if (!$forceRefresh && $this->cacheComponentName
+            && ($cache = Yii::$app->get($this->cacheComponentName, false))
+            && $cachedStats = $cache->getCacheData($this->slug)
+        ) {
                 return $cachedStats;
-            }
         }
 
         $stats = $this->generateCurrentStats();
-        $cache->update($this->slug, $stats);
+        if ($cache
+            || ( $this->cacheComponentName
+            && ($cache = Yii::$app->get($this->cacheComponentName, false)))
+        ) {
+            $cache->update($this->slug, $stats);
+        }
         return $stats;
     }
 
@@ -123,7 +133,11 @@ class BasePrinter  extends Component implements PrinterInterface
     }
 
 
-    public function getStatusData()
+    /**
+     * @throws Exception
+     * @throws InvalidConfigException
+     */
+    public function getStatusData(): array
     {
         $systemStatus = $this->getFullStatus();
         $systemLabels = $this->system->getLabels();
@@ -164,19 +178,31 @@ class BasePrinter  extends Component implements PrinterInterface
     private function generateCurrentStats(): array
     {
         $attributes = new PrinterAttributes($this);
+        $attributes->getAll();
         $alertConfig = Yii::$app->get($this->alertConfigComponentName, false);
         $system = new PrinterSystem($alertConfig, $attributes);
 
         $this->supplies = new PrinterSupplies($attributes, $alertConfig);
 //        $this->jobs = new PrinterJobs($this->config, $this->client);
 
-        return [
+        $status = [
             'lastChecked' => time(),
-//            self::STATUS_PRINTER_ATTRIBUTES => $this->getPrinterAttributesStatus(),
-            self::STATUS_SUPPLIES => $this->getStatus($this->gatherStates[self::PRINTER_SUPPLIES]),
-            self::STATUS_SYSTEM => $system->getStatus($this->gatherStates[self::PRINTER_SYSTEM]),
-            //self::STATUS_JOBS => $this->getJobsStatus(),
         ];
+        foreach ($this->gatherStates[self::PRINTER_SUPPLIES] as $stateName => $state) {
+            $status[self::STATUS_SUPPLIES][$stateName] = $this->getStatus($state);
+        }
+        foreach ($this->gatherStates[self::PRINTER_SYSTEM] as $stateName => $state) {
+            $status[self::STATUS_SYSTEM][$stateName] = $system->getStatus($state);
+        }
+
+        return $status;
+//        return [
+//            'lastChecked' => time(),
+////            self::STATUS_PRINTER_ATTRIBUTES => $this->getPrinterAttributesStatus(),
+//            self::STATUS_SUPPLIES => $this->getStatus($this->gatherStates[self::PRINTER_SUPPLIES]),
+//            self::STATUS_SYSTEM => $system->getStatus($this->gatherStates[self::PRINTER_SYSTEM]),
+//            //self::STATUS_JOBS => $this->getJobsStatus(),
+//        ];
     }
 
 
@@ -217,9 +243,9 @@ class BasePrinter  extends Component implements PrinterInterface
     }
 
     /**
-     * @throws InvalidConfigException
+     * @throws InvalidConfigException|Exception
      */
-    public function printToSpoolDirectory(string $filepath, int $copies = 1)
+    public function printToSpoolDirectory(string $filepath, int $copies = 1): bool
     {
         return $this
             ->getSpoolerComponent()
