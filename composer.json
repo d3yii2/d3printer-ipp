@@ -13,7 +13,8 @@
     "require": {
         "php": ">=7.4",
         "yiisoft/yii2": "~2.0.14",
-        "obray/ipp": "*"
+        "obray/ipp": "*",
+        "ext-curl": "*"
     },
     "autoload": {
         "psr-4": {

@@ -4,6 +4,10 @@ namespace d3yii2\d3printeripp\types;
 
 class PrinterAttributes
 {
+
+    public const TYPE_PRINTER_STATE = 'printer-state';
+    public const TYPE_PRINTER_ATTRIBUTES = 'printer-attributes';
+
     public const JOB_NAME = 'job-name';
     public const JOB_URI = 'job-uri';
     public const JOB_ID = 'job-id';
@@ -27,9 +31,19 @@ class PrinterAttributes
     public const MEDIA_COL = 'media-col';
 
     public const PRINTER_STATE = 'printer-state';
+    public const PRINTER_STATE_REASONS = 'printer-state-reasons';
     public const PRINTER_OUTPUT_TRAY = 'printer-output-tray';
 
     public const PRINTER_RESOLUTION = 'printer-resolution';
     public const PRINT_QUALITY = 'print-quality';
     public const PRINT_SCALING = 'print-scaling';
+    public const PRINTER_INPUT_TRAY = 'printer-input-tray';
+
+    public const MARKER_LEVELS = 'marker-levels';
+    public const MARKER_COLORS = 'marker-colors';
+    public const MARKER_NAMES = 'marker-names';
+    public const MARKER_TYPES = 'marker-types';
+    public const PRINTER_INFO = 'printer-info';
+    public const PRINTER_MAKE_AND_MODEL = 'printer-make-and-model';
+    public const PRINTER_LOCATION = 'printer-location';
 }

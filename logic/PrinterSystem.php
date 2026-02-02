@@ -5,16 +5,17 @@ namespace d3yii2\d3printeripp\logic;
 
 use d3yii2\d3printeripp\interfaces\StatusInterface;
 use obray\ipp\enums\PrinterState;
+use obray\ipp\exceptions\AuthenticationError;
+use obray\ipp\exceptions\HTTPError;
 use yii\base\Exception;
 
 /**
+ * get requested information from PrinterAttributes
  * Class PrinterSystem
  * @package d3yii2\d3printeripp\logic
  */
 class PrinterSystem implements StatusInterface
 {
-    protected PrinterConfig $printerConfig;
-    protected AlertConfig $alertConfig;
     protected PrinterAttributes $printerAttributes;
 
     private array $printerStates = [
@@ -32,17 +33,17 @@ class PrinterSystem implements StatusInterface
     public const STATUS_UP_DOWN = 'up-down';
 
     public function __construct(
-        AlertConfig $alertConfig,
         PrinterAttributes $printerAttributes
     ) {
-        $this->alertConfig = $alertConfig;
         $this->printerAttributes = $printerAttributes;
     }
 
     /**
-     * @return array{info: mixed|string, model: mixed|string, location: mixed|string, deviceUri: mixed|string,
-     *      host: mixed|null|string, state: string, status: string}
+     * @param array $gatherStates - which states to gather
+     * @return string[]
      * @throws Exception
+     * @throws AuthenticationError
+     * @throws HTTPError
      */
     public function getStatus(array $gatherStates): array
     {

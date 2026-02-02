@@ -4,13 +4,14 @@ namespace d3yii2\d3printeripp\components;
 
 use d3yii2\d3printer\components\Spooler;
 use d3yii2\d3printeripp\interfaces\PrinterInterface;
-use d3yii2\d3printeripp\logic\AlertConfig;
 use d3yii2\d3printeripp\logic\cache\PrinterCache;
 use d3yii2\d3printeripp\logic\PrinterAttributes;
 use d3yii2\d3printeripp\logic\PrinterJobs;
 use d3yii2\d3printeripp\logic\PrinterSupplies;
 use d3yii2\d3printeripp\logic\PrinterSystem;
 use d3yii2\d3printeripp\logic\ValueFormatter;
+use obray\ipp\exceptions\AuthenticationError;
+use obray\ipp\exceptions\HTTPError;
 use obray\ipp\transport\IPPPayload;
 use Yii;
 use yii\base\Component;
@@ -106,24 +107,32 @@ class BasePrinter  extends Component implements PrinterInterface
      * @throws Exception
      * @throws InvalidConfigException
      */
-    public function getFullStatus(bool $forceRefresh = false): array
+    public function getStatusFromPrinter(): array
     {
+        $stats = $this->generateCurrentStats();
+        if ($this->cacheComponentName
+            && ($cache = Yii::$app->get($this->cacheComponentName, false))
+        ) {
+            $cache->update($this->slug, $stats);
+        }
+        return $stats;
+    }
+    /**
+     * get from cache or printer status if not cached, get from printer
+     * @throws Exception
+     * @throws InvalidConfigException
+     */
+    public function getStatusFromCache(): array
+    {
+
         /** @var PrinterCache $cache */
-        if (!$forceRefresh && $this->cacheComponentName
+        if ($this->cacheComponentName
             && ($cache = Yii::$app->get($this->cacheComponentName, false))
             && $cachedStats = $cache->getCacheData($this->slug)
         ) {
                 return $cachedStats;
         }
-
-        $stats = $this->generateCurrentStats();
-        if ($cache
-            || ( $this->cacheComponentName
-            && ($cache = Yii::$app->get($this->cacheComponentName, false)))
-        ) {
-            $cache->update($this->slug, $stats);
-        }
-        return $stats;
+        return $this->getStatusFromPrinter();
     }
 
 
@@ -172,37 +181,41 @@ class BasePrinter  extends Component implements PrinterInterface
     }
 
     /**
-     * @throws InvalidConfigException
+     * @return array
      * @throws Exception
+     * @throws InvalidConfigException
+     * @throws AuthenticationError
+     * @throws HTTPError
      */
     private function generateCurrentStats(): array
     {
         $attributes = new PrinterAttributes($this);
         $attributes->getAll();
+        /** @var AlertConfig $alertConfig */
         $alertConfig = Yii::$app->get($this->alertConfigComponentName, false);
-        $system = new PrinterSystem($alertConfig, $attributes);
-
-        $this->supplies = new PrinterSupplies($attributes, $alertConfig);
-//        $this->jobs = new PrinterJobs($this->config, $this->client);
-
-        $status = [
-            'lastChecked' => time(),
-        ];
-        foreach ($this->gatherStates[self::PRINTER_SUPPLIES] as $stateName => $state) {
-            $status[self::STATUS_SUPPLIES][$stateName] = $this->getStatus($state);
+        $rules = $alertConfig->getRules();
+        foreach ($rules as &$rule) {
+            $value = $attributes->getAttribute($rule->getName())->getAttributeValue();
+            $valueLabelClass = $rule->getValueLabelClass();
+            if (method_exists($valueLabelClass, 'getLabel')) {
+                $value = $valueLabelClass::getLabel($value);
+            }
+            $rule->setDisplayValue($value);
         }
-        foreach ($this->gatherStates[self::PRINTER_SYSTEM] as $stateName => $state) {
-            $status[self::STATUS_SYSTEM][$stateName] = $system->getStatus($state);
-        }
+        return $rules;
+    }
 
-        return $status;
-//        return [
-//            'lastChecked' => time(),
-////            self::STATUS_PRINTER_ATTRIBUTES => $this->getPrinterAttributesStatus(),
-//            self::STATUS_SUPPLIES => $this->getStatus($this->gatherStates[self::PRINTER_SUPPLIES]),
-//            self::STATUS_SYSTEM => $system->getStatus($this->gatherStates[self::PRINTER_SYSTEM]),
-//            //self::STATUS_JOBS => $this->getJobsStatus(),
-//        ];
+
+    /**
+     * @throws AuthenticationError
+     * @throws Exception
+     * @throws HTTPError
+     */
+    public function getAllAttributes(): array
+    {
+        $attributes = new PrinterAttributes($this);
+        $attributes = $attributes->getAll();
+        return $attributes->getAllAttributes();
     }
 
 

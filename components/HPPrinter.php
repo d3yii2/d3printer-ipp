@@ -2,8 +2,6 @@
 namespace d3yii2\d3printeripp\components;
 
 
-namespace d3yii2\d3printeripp\components;
-
 
 /**
  * HP Printer specific implementation

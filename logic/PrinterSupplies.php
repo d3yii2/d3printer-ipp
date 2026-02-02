@@ -30,21 +30,17 @@ class PrinterSupplies implements StatusInterface
 
     protected PrinterConfig $printerConfig;
     protected PrinterAttributes $printerAttributes;
-    protected AlertConfig $alertConfig;
 
     private array $errors = [];
 
     /**
-     * @param PrinterConfig $printerConfig
      * @param PrinterAttributes $printerAttributes
-     * @param AlertConfig $alertConfig
+
      */
     public function __construct(
-        PrinterAttributes $printerAttributes,
-        AlertConfig $alertConfig
+        PrinterAttributes $printerAttributes
     ) {
         $this->printerAttributes = $printerAttributes;
-        $this->alertConfig = $alertConfig;
     }
 
     /**@return array{name: string, color: null|string, type: null|string, level: string, documentSize: string}
@@ -80,42 +76,42 @@ class PrinterSupplies implements StatusInterface
         return $returnStates;
     }
 
-    /**
-     * @throws Exception
-     */
-    public function paperSizeOk(): bool
-    {
-        return $this->alertConfig->getDocumentSize() === $this->printerAttributes->getDocumentSize();
-    }
+//    /**
+//     * @throws Exception
+//     */
+//    public function paperSizeOk(): bool
+//    {
+//        return $this->alertConfig->getDocumentSize() === $this->printerAttributes->getDocumentSize();
+//    }
 
-    /**
-     * @throws Exception
-     */
-    public function cartridgeOk(): bool
-    {
-        //@TODO - jānoskidro vai ir pareizs kārtridžs
-        $currentValue = $this->printerAttributes->getMarkerLevels();
-        $minValue = $this->alertConfig->getCartridgeMinValue();
-        return $currentValue > $minValue;
-    }
+//    /**
+//     * @throws Exception
+//     */
+//    public function cartridgeOk(): bool
+//    {
+//        //@TODO - jānoskidro vai ir pareizs kārtridžs
+//        $currentValue = $this->printerAttributes->getMarkerLevels();
+//        $minValue = $this->alertConfig->getCartridgeMinValue();
+//        return $currentValue > $minValue;
+//    }
 
-    /**
-     * @throws Exception
-     */
-    public function drumOk(): bool
-    {
-        $currentValue = $this->printerAttributes->getDrumLevel();
-        $minValue = $this->alertConfig->getDrumMinValue();
-        return $currentValue > $minValue;
-    }
+//    /**
+//     * @throws Exception
+//     */
+//    public function drumOk(): bool
+//    {
+//        $currentValue = $this->printerAttributes->getDrumLevel();
+//        $minValue = $this->alertConfig->getDrumMinValue();
+//        return $currentValue > $minValue;
+//    }
 
-    /**
-     * @throws Exception
-     */
-    public function printOrientationOk(): bool
-    {
-        return $this->alertConfig->getPrintOrientation() === $this->printerAttributes->getPrintOrientation();
-    }
+//    /**
+//     * @throws Exception
+//     */
+//    public function printOrientationOk(): bool
+//    {
+//        return $this->alertConfig->getPrintOrientation() === $this->printerAttributes->getPrintOrientation();
+//    }
 
     /**
      * @throws Exception

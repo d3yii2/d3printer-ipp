@@ -8,7 +8,7 @@ use obray\ipp\exceptions\AuthenticationError;
 use obray\ipp\exceptions\HTTPError;
 use obray\ipp\types\Operation;
 use yii\base\Exception;
-use obray\ipp\PrinterAttributes as IPPPrinterAttributes;
+use d3yii2\d3printeripp\obray\PrinterAttributes as IPPPrinterAttributes;
 use d3yii2\d3printeripp\types\PrinterAttributes as PrinterAttributeType;
 
 /**
@@ -44,6 +44,7 @@ class PrinterAttributes implements StatusInterface
     }
 
     /**
+     * request all attributes from printer
      * @return IPPPrinterAttributes
      * @throws Exception
      * @throws AuthenticationError
@@ -124,7 +125,7 @@ class PrinterAttributes implements StatusInterface
      */
     public function getMarkerLevels(): string
     {
-        return $this->getStringAttributeValue(self::ATTRIBUTE_KEYS['marker-levels']);
+        return $this->getStringAttributeValue(self::ATTRIBUTE_KEYS[PrinterAttributeType::MARKER_LEVELS]);
     }
 
     /**
@@ -132,7 +133,7 @@ class PrinterAttributes implements StatusInterface
      */
     public function getMarkerColors(): string
     {
-        return $this->getStringAttributeValue(self::ATTRIBUTE_KEYS['marker-colors']);
+        return $this->getStringAttributeValue(self::ATTRIBUTE_KEYS[PrinterAttributeType::MARKER_COLORS]);
     }
 
     /**
@@ -140,7 +141,7 @@ class PrinterAttributes implements StatusInterface
      */
     public function getMarkerNames(): string
     {
-        return $this->getStringAttributeValue(self::ATTRIBUTE_KEYS['marker-names']);
+        return $this->getStringAttributeValue(self::ATTRIBUTE_KEYS[PrinterAttributeType::MARKER_NAMES]);
     }
 
     /**
@@ -148,7 +149,7 @@ class PrinterAttributes implements StatusInterface
      */
     public function getMarkerTypes(): string
     {
-        return $this->getStringAttributeValue(self::ATTRIBUTE_KEYS['marker-types']);
+        return $this->getStringAttributeValue(self::ATTRIBUTE_KEYS[PrinterAttributeType::MARKER_TYPES]);
     }
 
     /**
@@ -156,7 +157,7 @@ class PrinterAttributes implements StatusInterface
      */
     public function getPrinterInfo(): string
     {
-        return $this->getStringAttributeValue(self::ATTRIBUTE_KEYS['printer-info']);
+        return $this->getStringAttributeValue(self::ATTRIBUTE_KEYS[PrinterAttributeType::PRINTER_INFO]);
     }
 
     /**
@@ -164,7 +165,7 @@ class PrinterAttributes implements StatusInterface
      */
     public function getPrinterMakeAndModel(): string
     {
-        return $this->getStringAttributeValue(self::ATTRIBUTE_KEYS['printer-make-and-model']);
+        return $this->getStringAttributeValue(self::ATTRIBUTE_KEYS[PrinterAttributeType::PRINTER_MAKE_AND_MODEL]);
     }
 
     /**
@@ -172,7 +173,7 @@ class PrinterAttributes implements StatusInterface
      */
     public function getPrinterLocation(): string
     {
-        return $this->getStringAttributeValue(self::ATTRIBUTE_KEYS['printer-location']);
+        return $this->getStringAttributeValue(self::ATTRIBUTE_KEYS[PrinterAttributeType::PRINTER_LOCATION]);
     }
 
     /**
@@ -203,6 +204,7 @@ class PrinterAttributes implements StatusInterface
 
     /**
      * @param array $gatherStates
+     * @return array
      * @throws AuthenticationError
      * @throws Exception
      * @throws HTTPError

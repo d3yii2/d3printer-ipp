@@ -38,7 +38,7 @@ class Request
         );
         $encodedPayload = $payload->encode();
 
-        return \obray\ipp\Request::send(
+        return \d3yii2\d3printeripp\obray\Request::send(
             $printer->getUri(),
             $encodedPayload,
             $printer->getUsername(),

@@ -1,8 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace d3yii2\d3printeripp\logic;
+namespace d3yii2\d3printeripp\components;
 
+use d3yii2\d3printeripp\enums\PrinterState;
+use d3yii2\d3printeripp\types\PrinterAttributes;
 use yii\base\Component;
 
 /**
@@ -23,6 +25,54 @@ class AlertConfig extends Component
     public ?string $emailTo = null;
     public ?string $emailSubject = null;
     public string $emailTemplate = 'This is alert about the Printer %s ';
+
+/**
+ * jāskatas ruļļus no vendor/d3yii2/d3printeripp/logic/PrinterSupplies.php
+ */
+    public function rules(): array
+    {
+        return [
+            [
+                'name' => PrinterAttributes::PRINTER_INFO,
+                'label' => 'Informācija',
+            ],
+            [
+                'name' => PrinterAttributes::PRINTER_STATE,
+                'label' => 'Statuss',
+                'valueLabelClass' => PrinterState::class,
+            ],
+            [
+                'name' => PrinterAttributes::PRINTER_STATE_REASONS,
+                'label' => 'Iemesls',
+            ],
+            [
+                'name' => PrinterAttributes::PRINTER_INPUT_TRAY,
+                'label' => 'Papīra padeve',
+                'csvStringParam' => 'status',
+                'enums' => [
+                    0 => 'Ok',
+                    19=> 'Nav Papīra'
+                ]
+
+            ],
+            [
+                'name' => PrinterAttributes::MARKER_LEVELS,
+                'label' => 'Krtridžš',
+                //'minValue' => 10,
+            ],
+        ];
+    }
+
+    /**
+     * @return AlertConfigRule[]
+     */
+    public function getRules(): array
+    {
+        return array_map(
+            static fn(array $rule): AlertConfigRule => AlertConfigRule::fromArray($rule),
+            $this->rules()
+        );
+    }
 
     /**
      * @return string

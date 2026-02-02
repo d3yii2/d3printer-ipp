@@ -4,12 +4,16 @@ declare(strict_types=1);
 namespace d3yii2\d3printeripp\commands;
 
 use d3system\commands\D3CommandController;
-use d3yii2\d3printeripp\components\PrinterIPP;
+use d3yii2\d3printeripp\components\HPPrinter;
 use d3yii2\d3printeripp\types\PrinterAttributes;
-use d3yii2\d3printeripp\logic\printers\HPPrinter;
+use obray\ipp\Attribute;
+use obray\ipp\exceptions\AuthenticationError;
+use obray\ipp\exceptions\HTTPError;
+use obray\ipp\types\Collection;
+use ReflectionClass;
 use yii\base\Exception;
 use Yii;
-use yii\console\Controller;
+use yii\base\InvalidConfigException;
 use yii\console\ExitCode;
 use yii\helpers\VarDumper;
 
@@ -19,74 +23,121 @@ use yii\helpers\VarDumper;
 class PrinterCommand extends D3CommandController
 {
 
+
     /**
-     * Check all printer health
+     * @throws Exception
+     * @throws InvalidConfigException
      */
-    public function actionHealthAll()
+    public function actionStatus(string $printerComponentName): int
     {
-        try {
-            $health = $this->printerIPP->getStatusAll(true); // Force refresh
-
-            foreach ($health as $printerName => $status) {
-                print_r($status);
-                $this->stdout("Printer: $printerName\n");
-                $this->stdout("Online: " . ( $status['system']['alive'] === 1  ? 'Yes' :  'No' ) . "\n");
-
-                if (isset($status['supplies'])) {
-                    $this->stdout("Supplies:\n");
-                    foreach ($status['supplies'] as $supply) {
-                        //@TODO
-                        //$this->stdout("  - {$supply['name']}: {$supply['level']}% ({$supply['status']})\n");
-                    }
-                }
-
-                if (isset($status['error'])) {
-                    $this->stdout("Error: {$status['error']}\n");
-                }
-
-                $this->stdout("\n");
-            }
-        } catch (Exception $e) {
-            Yii::error($e->getTraceAsString());
-            $this->stdout("Unexpected error \n");
-        }
-    }
-
-    public function actionHealth(?string $slug)
-    {
-        if (!Yii::$app->has($slug)) {
-            $this->out('Not found printer component with slug: "' . $slug . '"');
+        if (!Yii::$app->has($printerComponentName)) {
+            $this->out('Not found printer component with slug: "' . $printerComponentName . '"');
             return ExitCode::CONFIG;
         }
-        /** @var \d3yii2\d3printeripp\components\HPPrinter $printer */
-        $printer = Yii::$app->get($slug);
-        //$this->out('Printer: ' . $printer->name);
-        $status = $printer->getFullStatus();
-        echo VarDumper::dump($status, 10, true);
+        /** @var HPPrinter $printer */
+        $printer = Yii::$app->get($printerComponentName);
+        $this->out('Printer: ' . $printer->name);
+        /** būtu jāpadod */
+        $status = $printer->getStatusFromPrinter();
+        echo VarDumper::dump($status);
+        return ExitCode::OK;
+    }
 
+    /**
+     * @throws InvalidConfigException
+     * @throws HTTPError
+     * @throws AuthenticationError
+     * @throws Exception
+     * @throws \ReflectionException
+     */
+    public function actionAttributes(
+        string $printerComponentName,
+        ?string $filterAttributeName = null
+    ): int
+    {
+        if (!Yii::$app->has($printerComponentName)) {
+            $this->out('Not found printer component with slug: "' . $printerComponentName . '"');
+            return ExitCode::CONFIG;
+        }
+        /** @var HPPrinter $printer */
+        $printer = Yii::$app->get($printerComponentName);
+        $this->out('Printer: ' . $printer->name);
 
-//        $this->stdout("Printer: {$printerName}\n");
-//        $this->stdout("Online: " . ($status['online'] ? 'Yes' : 'No') . "\n");
-//
-//        if (isset($status['supplies'])) {
-//            $this->stdout("Supplies:\n");
-//            foreach ($status['supplies'] as $supply) {
-//                $this->stdout("  - {$supply['name']}: {$supply['level']}% ({$supply['status']})\n");
-//            }
-//        }
-//
-//        if (isset($status['error'])) {
-//            $this->stdout("Error: {$status['error']}\n");
-//        }
-//
-//        $this->stdout("\n");
+        $attributes = $printer->getAllAttributes();
+        foreach ($attributes as $attributeName => $attribute) {
+            if (!$filterAttributeName || $filterAttributeName === $attributeName) {
+                $this->printAttribute($attribute);
+            }
+        }
+        return ExitCode::OK;
+    }
+
+    /**
+     * @throws \ReflectionException
+     */
+    private function printAttribute(
+        $attribute,
+        string $indent = '',
+        ?string $key = null
+    ): void
+    {
+        $this->out('');
+        if ($key) {
+            $this->out($indent . ' key: ' . $key);
+        }
+        if ($attribute instanceof Attribute ) {
+            $attributeObject = $attribute->getAttributeValueClass();
+            if ($name = $attribute->getName()) {
+                $this->out($indent . $name);
+            }
+            $this->out($indent . ' class: ' . get_class($attributeObject));
+            if (!$attributeObject instanceof Collection) {
+                $this->out($indent . ' value: ' . $attribute->getAttributeValue());
+            } else {
+                $reflection = new ReflectionClass($attributeObject);
+                $property = $reflection->getProperty('attributes');
+                $property->setAccessible(true);
+                foreach ($property->getValue($attributeObject) as $k => $attribute2) {
+                    self::printAttribute(
+                        $attribute2,
+                        $indent . '  ',
+                        $k
+                    );
+                }
+
+            }
+        } elseif ($attribute instanceof Collection) {
+                $reflection = new ReflectionClass($attribute);
+                $property = $reflection->getProperty('attributes');
+                $property->setAccessible(true);
+                foreach ($property->getValue($attribute) as $k => $attribute2) {
+                    self::printAttribute(
+                        $attribute2,
+                        $indent . '  ',
+                        $k
+                    );
+                }
+        } elseif (is_array($attribute)) {
+            foreach ($attribute as $key2 => $attribute2) {
+                self::printAttribute(
+                    $attribute2,
+                    $indent . '  ',
+                    (string)$key2
+                );
+            }
+        } elseif (method_exists($attribute, 'getValue')) {
+            $this->out($indent . ' class: ' . get_class($attribute));
+            $this->out($indent . ' value: ' . $attribute->getValue());
+        } else {
+            $this->out($indent . 'VarDump: ' . VarDumper::dumpAsString($attribute));
+        }
     }
 
     /**
      * Test print to all printers
      * @throws Exception
      */
-    public function actionTestPrint(?string $slug = HPPrinter::SLUG)
+    public function actionTestPrint(string $slug)
     {
         // Create a simple test document (PostScript)
         $testDocument = "%!PS-Adobe-3.0\n";
