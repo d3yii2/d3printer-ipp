@@ -59,9 +59,9 @@ class PrinterCache extends Component
 
     /**
      * @param string $printerSlug
-     * @return array
+     * @return object
      */
-    public function getCacheData(string $printerSlug): array
+    public function getCacheData(string $printerSlug): object
     {
         $data = $this->cache->get($this->getCacheKey($printerSlug));
         return is_array($data) ? $data : [];

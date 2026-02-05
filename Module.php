@@ -13,12 +13,16 @@ use Yii;
 class Module extends D3Module
 {
     public $controllerNamespace = 'd3yii2\d3printeripp\controllers';
-    
+
+    public array $panelViewRoleNames = [];
+
     /**
      * @return string
      */
     public static function getLabel(): string
     {
-        return Yii::t('d3printeripp', 'd3yii2/d3printeripp');
+        return Yii::t('d3printeripp', 'IPP Printer');
     }
+
+
 }

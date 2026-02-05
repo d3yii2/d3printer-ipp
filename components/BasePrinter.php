@@ -3,6 +3,7 @@
 namespace d3yii2\d3printeripp\components;
 
 use d3yii2\d3printer\components\Spooler;
+use d3yii2\d3printeripp\components\rules\RulesInterface;
 use d3yii2\d3printeripp\interfaces\PrinterInterface;
 use d3yii2\d3printeripp\logic\cache\PrinterCache;
 use d3yii2\d3printeripp\logic\PrinterAttributes;
@@ -42,10 +43,6 @@ class BasePrinter  extends Component implements PrinterInterface
     public ?string $alertConfigComponentName = null;
     public ?string $cacheComponentName = null;
     public array $curlOptions = [];
-    public array $gatherStates = [
-        self::PRINTER_SYSTEM => [PrinterSystem::STATUS_UP_DOWN],
-        self::PRINTER_SUPPLIES => [PrinterSupplies::STATUS_MARKER_LEVEL],
-    ];
     public array $panel;
 
 
@@ -104,10 +101,14 @@ class BasePrinter  extends Component implements PrinterInterface
     }
 
     /**
+     * get actual status from printer
+     * @return object
+     * @throws AuthenticationError
      * @throws Exception
+     * @throws HTTPError
      * @throws InvalidConfigException
      */
-    public function getStatusFromPrinter(): array
+    public function getStatusFromPrinter(): object
     {
         $stats = $this->generateCurrentStats();
         if ($this->cacheComponentName
@@ -117,12 +118,16 @@ class BasePrinter  extends Component implements PrinterInterface
         }
         return $stats;
     }
+
     /**
      * get from cache or printer status if not cached, get from printer
+     * @return object
+     * @throws AuthenticationError
      * @throws Exception
+     * @throws HTTPError
      * @throws InvalidConfigException
      */
-    public function getStatusFromCache(): array
+    public function getStatusFromCache(): object
     {
 
         /** @var PrinterCache $cache */
@@ -187,22 +192,14 @@ class BasePrinter  extends Component implements PrinterInterface
      * @throws AuthenticationError
      * @throws HTTPError
      */
-    private function generateCurrentStats(): array
+    private function generateCurrentStats(): object
     {
         $attributes = new PrinterAttributes($this);
         $attributes->getAll();
         /** @var AlertConfig $alertConfig */
         $alertConfig = Yii::$app->get($this->alertConfigComponentName, false);
-        $rules = $alertConfig->getRules();
-        foreach ($rules as &$rule) {
-            $value = $attributes->getAttribute($rule->getName())->getAttributeValue();
-            $valueLabelClass = $rule->getValueLabelClass();
-            if (method_exists($valueLabelClass, 'getLabel')) {
-                $value = $valueLabelClass::getLabel($value);
-            }
-            $rule->setDisplayValue($value);
-        }
-        return $rules;
+        $alertConfig->loadAttributes($attributes);
+        return $alertConfig;
     }
 
 

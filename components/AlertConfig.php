@@ -1,148 +1,126 @@
 <?php
+
 declare(strict_types=1);
 
 namespace d3yii2\d3printeripp\components;
 
-use d3yii2\d3printeripp\enums\PrinterState;
-use d3yii2\d3printeripp\types\PrinterAttributes;
+use d3yii2\d3printeripp\components\rules\RulesInterface;
+use d3yii2\d3printeripp\logic\PrinterAttributes;
 use yii\base\Component;
 
 /**
  * Class AlertConfig
  * @package d3yii2\d3printer\logic\settings
  *
- * @property-read string $documentSize
+ * @todo jāpieliek lastUpdate rule, kurai jauzdod expire intervals
  */
-class AlertConfig extends Component
+abstract class AlertConfig extends Component
 {
-    public int $cartridgeMinValue = 10;
-    public int $drumMinValue = 10;
-    public string $paperSize = 'A4';
-    public string $paperType = '27';
-    public string $printOrientation = 'Portrait';
-    public string $sleepAfter = '15';
-    public string $emailFrom = 'system@localhost';
-    public ?string $emailTo = null;
-    public ?string $emailSubject = null;
-    public string $emailTemplate = 'This is alert about the Printer %s ';
-
-/**
- * jāskatas ruļļus no vendor/d3yii2/d3printeripp/logic/PrinterSupplies.php
- */
-    public function rules(): array
-    {
-        return [
-            [
-                'name' => PrinterAttributes::PRINTER_INFO,
-                'label' => 'Informācija',
-            ],
-            [
-                'name' => PrinterAttributes::PRINTER_STATE,
-                'label' => 'Statuss',
-                'valueLabelClass' => PrinterState::class,
-            ],
-            [
-                'name' => PrinterAttributes::PRINTER_STATE_REASONS,
-                'label' => 'Iemesls',
-            ],
-            [
-                'name' => PrinterAttributes::PRINTER_INPUT_TRAY,
-                'label' => 'Papīra padeve',
-                'csvStringParam' => 'status',
-                'enums' => [
-                    0 => 'Ok',
-                    19=> 'Nav Papīra'
-                ]
-
-            ],
-            [
-                'name' => PrinterAttributes::MARKER_LEVELS,
-                'label' => 'Krtridžš',
-                //'minValue' => 10,
-            ],
-        ];
-    }
+    /** @var RulesInterface[]  */
+    private array $loadedRule = [];
+    public string $loadedTime = '';
 
     /**
-     * @return AlertConfigRule[]
+     * jāskatas ruļļus no vendor/d3yii2/d3printeripp/logic/PrinterSupplies.php
+     * @return array[]
+     */
+    abstract public function rules(): array;
+
+    /**
+     * @return RulesInterface[]
      */
     public function getRules(): array
     {
-        return array_map(
-            static fn(array $rule): AlertConfigRule => AlertConfigRule::fromArray($rule),
-            $this->rules()
-        );
+        return $this->rules();
+    }
+
+    public function loadAttributes(PrinterAttributes $attributes): void
+    {
+        $this->loadedTime = date('Y-m-d H:i:s');
+        foreach ($this->getRules() as $rule) {
+            $ruleClassName = $rule['className'];
+            $value = $attributes
+                ->getAttribute($ruleClassName::getAttributeName())
+                ->getAttributeValue();
+            /** @var RulesInterface $ruleObject */
+            $ruleObject = new $ruleClassName($value);
+            foreach ($rule as $propertyName => $propertyValue) {
+                if ($propertyName === 'className') {
+                    continue;
+                }
+                $ruleObject->$propertyName = $propertyValue;
+            }
+            $this->loadedRule[] = $ruleObject;
+        }
+    }
+
+    public function hasWarning(): bool
+    {
+        foreach ($this->loadedRule as $ruleObject) {
+            if ($ruleObject->isWarning()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public function hasError(): bool
+    {
+        foreach ($this->loadedRule as $ruleObject) {
+            if ($ruleObject->isError()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
-     * @return string
+     * @return string[]
      */
-    public function getDocumentSize(): string
+    public function getWarningMessages(): array
     {
-        return $this->paperSize;
+        $list = [];
+        foreach ($this->loadedRule as $ruleObject) {
+            if ($ruleObject->isWarning()) {
+                $list[] = $ruleObject->getWarningMessage();
+            }
+        }
+        return $list;
     }
 
     /**
-     * @return string
+     * @return string[]
      */
-    public function getPaperType(): string
+    public function getErrorMessages(): array
     {
-        return $this->paperType;
+        $list = [];
+        foreach ($this->loadedRule as $ruleObject) {
+            if ($ruleObject->isWarning()) {
+                $list[] = $ruleObject->getWarningMessage();
+            }
+        }
+        return $list;
     }
 
     /**
-     * @return string
+     * @return array<int, array{
+     *      label: string,
+     *      value: string,
+     *      isWarning: bool,
+     *      isError: bool
+     *  }>
      */
-    public function getSleepAfter(): string
+    public function getDisplayList(): array
     {
-        return $this->sleepAfter;
-    }
-
-    /**
-     * @return string
-     */
-    public function getPrintOrientation(): string
-    {
-        return $this->printOrientation;
-    }
-
-    /**
-     * @return int
-     */
-    public function getCartridgeMinValue(): int
-    {
-        return $this->cartridgeMinValue;
-    }
-
-    /**
-     * @return int
-     */
-    public function getDrumMinValue(): int
-    {
-        return $this->drumMinValue;
-    }
-
-    /**
-     * @return string
-     */
-    public function getEmailFrom(): string
-    {
-        return $this->emailFrom;
-    }
-
-    /**
-     * @return string|null
-     */
-    public function getEmailTo(): ?string
-    {
-        return $this->emailTo;
-    }
-
-    /**
-     * @return string
-     */
-    public function getEmailSubject(string $printerName): string
-    {
-        return $this->emailSubject ?? 'Printer ' . $printerName . ' Alert';
+        $list = [];
+        foreach ($this->loadedRule as $ruleObject) {
+            $list[] = [
+                'label' => $ruleObject->getLabel(),
+                'value' => $ruleObject->getValueLabel(),
+                'isWarning' => $ruleObject->isWarning(),
+                'isError' => $ruleObject->isError(),
+            ];
+        }
+        return $list;
     }
 }

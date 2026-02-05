@@ -4,13 +4,16 @@ declare(strict_types=1);
 namespace d3yii2\d3printeripp\commands;
 
 use d3system\commands\D3CommandController;
+use d3yii2\d3printeripp\components\AlertConfig;
 use d3yii2\d3printeripp\components\HPPrinter;
 use d3yii2\d3printeripp\types\PrinterAttributes;
+use ea\app\components\IppPrinter3002dnAlertConfig;
 use obray\ipp\Attribute;
 use obray\ipp\exceptions\AuthenticationError;
 use obray\ipp\exceptions\HTTPError;
 use obray\ipp\types\Collection;
 use ReflectionClass;
+use ReflectionException;
 use yii\base\Exception;
 use Yii;
 use yii\base\InvalidConfigException;
@@ -25,7 +28,11 @@ class PrinterCommand extends D3CommandController
 
 
     /**
+     * @param string $printerComponentName
+     * @return int
+     * @throws AuthenticationError
      * @throws Exception
+     * @throws HTTPError
      * @throws InvalidConfigException
      */
     public function actionStatus(string $printerComponentName): int
@@ -37,18 +44,25 @@ class PrinterCommand extends D3CommandController
         /** @var HPPrinter $printer */
         $printer = Yii::$app->get($printerComponentName);
         $this->out('Printer: ' . $printer->name);
-        /** būtu jāpadod */
-        $status = $printer->getStatusFromPrinter();
-        echo VarDumper::dump($status);
+        /** @var AlertConfig $alert */
+        $alert = $printer->getStatusFromPrinter();
+        if ($alert->hasWarning()) {
+            echo VarDumper::dump($alert->getWarningMessages());
+        }
+        if ($alert->hasError()) {
+            echo VarDumper::dump($alert->getErrorMessages());
+        }
+        echo VarDumper::dump($alert->getDisplayList());
         return ExitCode::OK;
     }
 
     /**
+     * print aut all printer attributes
      * @throws InvalidConfigException
      * @throws HTTPError
      * @throws AuthenticationError
      * @throws Exception
-     * @throws \ReflectionException
+     * @throws ReflectionException
      */
     public function actionAttributes(
         string $printerComponentName,
@@ -73,7 +87,8 @@ class PrinterCommand extends D3CommandController
     }
 
     /**
-     * @throws \ReflectionException
+     * @throws ReflectionException
+     *
      */
     private function printAttribute(
         $attribute,
@@ -137,7 +152,7 @@ class PrinterCommand extends D3CommandController
      * Test print to all printers
      * @throws Exception
      */
-    public function actionTestPrint(string $slug)
+    public function actionTestPrint(string $slug): void
     {
         // Create a simple test document (PostScript)
         $testDocument = "%!PS-Adobe-3.0\n";
