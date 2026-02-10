@@ -78,9 +78,9 @@ class PrinterAttributes implements StatusInterface
 
     /**
      * @param string $key
-     * @return Attribute
+     * @return Attribute|array
      */
-    public function getAttribute(string $key): Attribute
+    public function getAttribute(string $key)
     {
         return $this->attributes->{$key};
     }

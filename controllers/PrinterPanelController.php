@@ -3,6 +3,7 @@
 namespace d3yii2\d3printeripp\controllers;
 
 use d3yii2\d3printeripp\Module;
+use Exception;
 use unyii2\yii2panel\Controller;
 use Yii;
 use yii\base\InvalidConfigException;
@@ -38,19 +39,33 @@ class PrinterPanelController extends Controller
     /**
      * @throws InvalidConfigException
      */
-    public function actionDashboard(string $printerComponentName)
+    public function actionDashboard(string $printerComponentName): string
     {
-        if (!Yii::$app->has($printerComponentName)) {
-            return 'Not found printer component with name: "' . $printerComponentName . '"';
-        }
-        if (!$printer = Yii::$app->get($printerComponentName)) {
-            return 'Not found printer component with name: "' . $printerComponentName . '"';
+        $errorMessage = null;
+        $printer = null;
+        $alert = null;
+        try {
+            if (!Yii::$app->has($printerComponentName)) {
+                $errorMessage = 'Not found printer component with name: "' . $printerComponentName . '"';
+                Yii::error($errorMessage);
+            }
+            if (!$printer = Yii::$app->get($printerComponentName)) {
+                $errorMessage = 'Not found printer component with name: "' . $printerComponentName . '"';
+                Yii::error($errorMessage);
+            }
+            if ($printer) {
+                $alert = $printer->getStatusFromCache();
+            }
+        } catch (Exception $e) {
+            Yii::error($e->getMessage() . PHP_EOL . $e->getTraceAsString());
+            $errorMessage = $e->getMessage();
         }
         return $this->render(
             'ipp-panel',
             [
                 'printer' => $printer,
-                'alert' => $printer->getStatusFromCache()
+                'alert' => $alert,
+                'errorMessage' => $errorMessage
             ]
         );
     }

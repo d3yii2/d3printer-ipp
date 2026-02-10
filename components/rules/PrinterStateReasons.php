@@ -10,12 +10,15 @@ class PrinterStateReasons implements RulesInterface
     private const REASON_NONE = 'none';
     private const REASONS_MAP = [
         self::REASON_NONE => 'Nekas nav',
-        'media-empty' => 'Nav Papīra',
+        'media-empty' => 'Nav Padeve',
+        'media-empty-error' => 'Nav Padeve / Kļūda',
         'media-needed' => 'Nav Papīra',
+        'media-needed-error' => 'Nav Papīra / Kļūda',
         'toner-low' => 'Maz Tonera',
         'toner-empty' => 'Nav Tonera',
         'door-open' => 'Durvis atvērtas',
         'jamed' => 'Papīrs iesprūdis',
+        'spool-area-full-report' => 'Spūleris pilns',
     ];
     private string $value;
 

@@ -10,82 +10,100 @@ composer require yourcompany/yii2-ipp-printer-manager
 
 ## Configuration
 
-Add the component to your `config/web.php`:
+In config console add controller:
 
 ```php
+'controllerMap' => [
+        'printeripp' => [
+            'class' => 'd3yii2\d3printeripp\commands\PrinterCommand',
+        ],
+    ],
+```
+
+Add the components
+
+```php
+    'modules' => [
+        'd3printeripp' => [
+            'class' => 'd3yii2\d3printeripp\Module',
+            /** roles for view dashboard     panel */
+            'panelViewRoleNames' => ['D3PrinterViewPanel'],
+        ],
+    ],
 'components' => [
-    'printerIPP' => [
-        'class' => 'app\components\PrinterIPP',
-        'autoConnect' => false,
-        'healthCheckInterval' => 300, // 5 minutes
-        'printers' => [
-            'office_hp_laser' => [
-                'type' => 'hp',
-                'host' => '192.168.1.100',
-                'port' => 631,
-                'username' => 'admin',
-                'password' => 'secure_password',
-                'timeout' => 30,
-                'encryption' => false
-            ],
-            'warehouse_canon' => [
-                'type' => 'canon',
-                'host' => '192.168.1.101',
-                'port' => 631,
-                'pincode' => '1234',
-                'encryption' => true,
-                'timeout' => 45
-            ],
-            'reception_generic' => [
-                'type' => 'generic',
-                'host' => '192.168.1.102',
-                'port' => 631,
-                'timeout' => 20
-            ]
-        ]
-    ]
+        /** use for printer files spooling */
+        'printerSpooler' => [
+            'class' => 'd3yii2\d3printer\components\Spooler',
+            'baseDirectory' => 'd3printer'
+        ],
+        /** define alert config for printers. class d3yii2\d3printeripp\components\components */
+        'ippAlertConfig' => [
+            'class' => 'ea\app\components\IppPrinter3002dnAlertConfig'
+        ],
+        /** define mailer for printers. */
+        'ippPrinterMailer' => [
+            'class' => 'd3yii2\d3printeripp\components\Mailer',
+            'from' => 'zzzz@zzzz.lv',
+            'to' => ['zz@sss.lv'],
+        ],
+        /** define printer status cache */
+        'printerStatusCache' => [
+            'class' => 'd3yii2\d3printeripp\logic\cache\PrinterCache',
+        ],
+        /** define printer component */
+        'ippTest' => [
+            'class' => '\d3yii2\d3printeripp\components\BasePrinter',
+            'printerName' => 'ippTest',
+            'name' => 'ippTest',
+            'host' => '192.168.88.168',  
+            'username' => 'admin',
+            'password' => '',
+            'pincode' => '77777',
+            'timeout' => 30,
+            'encryption' => false,
+            'spoolerComponentName' => 'printerSpooler',
+            'alertConfigComponentName' => 'ippAlertConfig',
+            'mailerComponentName' => 'ippPrinterMailer',
+        ],
 ],
 ```
 
-## Usage Examples
+## Usage command
+
+show printer ippTest status
+```shell
+php yii printeripp/status ippTest
+
+```
+
+show printer ippTest status
+```shell
+php yii printeripp/status ippTest 0 1
+```
+
+check alert and send one time alert email
+Mostly add to crontab
+```shell
+php yii printeripp/status ippTest 0 1
+```
+
+
+### Dashboard panel
+```php
+ $config['components']['dashboard']['panels']['notifications'][] = [
+        'route' => '/d3printeripp/printer-panel/dashboard',
+        'params' => [
+            'printerComponentName' => 'ippTest'
+        ],
+        'tag' => 'div',
+        'options' => ['class' => 'col-sm-6 col-md-4 col-lg-3']
+    ];
+```
 
 ### Basic Printing
 
 ```php
-// In your controller
-public function actionPrint()
-{
-    $printerIPP = \Yii::$app->printerIPP;
-    
-    // Load document (PDF, PostScript, etc.)
-    $document = file_get_contents('/path/to/document.pdf');
-    
-    // Print options
-    $options = [
-        'job-name' => 'Invoice #12345',
-        'copies' => 1,
-        'media' => 'iso_a4_210x297mm',
-        'sides' => 'one-sided',
-        'print-quality' => 'high'
-    ];
-    
-    try {
-        $result = $printerIPP->printBySlug('office_hp_laser', $document, $options);
-        
-        if ($result['success']) {
-            return $this->asJson([
-                'status' => 'success',
-                'job_id' => $result['job-id'],
-                'message' => 'Document queued for printing'
-            ]);
-        }
-    } catch (\Exception $e) {
-        return $this->asJson([
-            'status' => 'error',
-            'message' => $e->getMessage()
-        ]);
-    }
-}
+Yii::$app->ippTest->printToSpoolDirectory($filePath),
 ```
 
 ### Health Monitoring

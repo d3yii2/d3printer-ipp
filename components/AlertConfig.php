@@ -5,20 +5,30 @@ declare(strict_types=1);
 namespace d3yii2\d3printeripp\components;
 
 use d3yii2\d3printeripp\components\rules\RulesInterface;
-use d3yii2\d3printeripp\logic\PrinterAttributes;
 use yii\base\Component;
+
 
 /**
  * Class AlertConfig
  * @package d3yii2\d3printer\logic\settings
  *
- * @todo jāpieliek lastUpdate rule, kurai jauzdod expire intervals
+ *
+ * @property-read string[] $warningMessages list of warning messages
+ * @property-read string[] $errorMessages list of error messages
+ * @property-read array[]|RulesInterface[] $rules list of rules
+ * @property-read array[] $displayList list of display items
  */
 abstract class AlertConfig extends Component
 {
+
+
     /** @var RulesInterface[]  */
     private array $loadedRule = [];
+
+
     public string $loadedTime = '';
+
+    public bool $isWarningChanged = false;
 
     /**
      * jāskatas ruļļus no vendor/d3yii2/d3printeripp/logic/PrinterSupplies.php
@@ -39,18 +49,24 @@ abstract class AlertConfig extends Component
         $this->loadedTime = date('Y-m-d H:i:s');
         foreach ($this->getRules() as $rule) {
             $ruleClassName = $rule['className'];
-            $value = $attributes
-                ->getAttribute($ruleClassName::getAttributeName())
-                ->getAttributeValue();
-            /** @var RulesInterface $ruleObject */
-            $ruleObject = new $ruleClassName($value);
-            foreach ($rule as $propertyName => $propertyValue) {
-                if ($propertyName === 'className') {
-                    continue;
-                }
-                $ruleObject->$propertyName = $propertyValue;
+            $ruleAttributes = $attributes
+                ->getAttribute($ruleClassName::getAttributeName());
+
+            if (!is_array($ruleAttributes)) {
+                $ruleAttributes = [$ruleAttributes];
             }
-            $this->loadedRule[] = $ruleObject;
+            foreach ($ruleAttributes as $ruleEttribute) {
+                $value = $ruleEttribute->getAttributeValue();
+                /** @var RulesInterface $ruleObject */
+                $ruleObject = new $ruleClassName($value);
+                foreach ($rule as $propertyName => $propertyValue) {
+                    if ($propertyName === 'className') {
+                        continue;
+                    }
+                    $ruleObject->$propertyName = $propertyValue;
+                }
+                $this->loadedRule[] = $ruleObject;
+            }
         }
     }
 
@@ -122,5 +138,30 @@ abstract class AlertConfig extends Component
             ];
         }
         return $list;
+    }
+
+    public function warningMustBeSent(self $prev): bool
+    {
+        return  ( $this->getWarningMessages() !== $prev->getWarningMessages())
+            && ($this->hasWarning() || $this->hasError());
+    }
+
+    /**
+     */
+    public function createEmailBody(): string
+    {
+        $html = '';
+        if ($this->hasError()) {
+            $html .= 'Errors: <br> - ' . implode('<br> - ', $this->getErrorMessages());
+        }
+        if ($this->hasError()) {
+            $html .= 'Warnings: <br>- ' . implode('<br> - ', $this->getErrorMessages());
+        }
+        $list = [];
+        foreach ($this->getDisplayList() as $item) {
+            $list[] = $item['label'] . ': ' . $item['value'];
+        }
+        $html .= 'Status: <br>- ' . implode('<br>- ', $list);
+        return $html;
     }
 }

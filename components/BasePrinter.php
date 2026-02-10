@@ -3,16 +3,13 @@
 namespace d3yii2\d3printeripp\components;
 
 use d3yii2\d3printer\components\Spooler;
-use d3yii2\d3printeripp\components\rules\RulesInterface;
 use d3yii2\d3printeripp\interfaces\PrinterInterface;
-use d3yii2\d3printeripp\logic\cache\PrinterCache;
-use d3yii2\d3printeripp\logic\PrinterAttributes;
-use d3yii2\d3printeripp\logic\PrinterJobs;
-use d3yii2\d3printeripp\logic\PrinterSupplies;
-use d3yii2\d3printeripp\logic\PrinterSystem;
-use d3yii2\d3printeripp\logic\ValueFormatter;
+use d3yii2\d3printeripp\types\PrinterAttributes;
+use d3yii2\d3printeripp\types\PrinterAttributeValues;
+use InvalidArgumentException;
 use obray\ipp\exceptions\AuthenticationError;
 use obray\ipp\exceptions\HTTPError;
+use obray\ipp\Printer;
 use obray\ipp\transport\IPPPayload;
 use Yii;
 use yii\base\Component;
@@ -20,15 +17,13 @@ use yii\base\Exception;
 use yii\base\InvalidConfigException;
 
 /**
- * Base abstract class for printer implementations
+ * Base class for printer implementations
+ * tested on HP Laser Jet Pro 3002dn
  */
 class BasePrinter  extends Component implements PrinterInterface
 {
 
-    public const PRINTER_SYSTEM = 'PrinterSystem';
-    public const PRINTER_SUPPLIES = 'PrinterSupplies';
-
-    public string $slug;
+    public string $printerName;
     public string $name;
     public ?string $daemonName = null;
     public string $host;
@@ -42,33 +37,27 @@ class BasePrinter  extends Component implements PrinterInterface
     public string $spoolerComponentName;
     public ?string $alertConfigComponentName = null;
     public ?string $cacheComponentName = null;
+    public ?string $mailerComponentName = null;
     public array $curlOptions = [];
-    public array $panel;
 
+    /** @var int
+     *  @class d3yii2\d3printeripp\types\PrinterAttributeValues
+     */
+    public int $pageOrientation = PrinterAttributeValues::ORIENTATION_PORTRAIT;
 
+    /**
+     * @var string
+     * @class d3yii2\d3printeripp\types\PrinterAttributeValues
+     */
+    public string $pageSize = PrinterAttributeValues::MEDIA_SIZE_A4;
 
-
-    protected PrinterJobs $jobs;
-    protected PrinterSystem $system;
-    protected PrinterSupplies $supplies;
-    protected PrinterCache $cache;
-    protected ?IPPPayload $responsePayload = null;
     protected ?string $lastError = null;
     protected ?Spooler $printerSpooler = null;
+    /**
+     * @var mixed
+     */
+    private ?Printer $printer = null;
 
-    public const STATUS_PRINTER_ATTRIBUTES = 'attributes';
-    public const STATUS_HEALTH = 'health';
-    public const STATUS_JOBS = 'jobs';
-    public const STATUS_SYSTEM = 'system';
-    public const STATUS_SUPPLIES = 'supplies';
-    public const STATUS_ERRORS = 'errors';
-
-//    public function __construct(PrinterConfig $config)
-//    {
-//        $this->config = $config;
-//        $this->initializeClient();
-//        $this->initializeComponents();
-//    }
 
     public function getUsername(): ?string
     {
@@ -85,21 +74,6 @@ class BasePrinter  extends Component implements PrinterInterface
         return 'ipp://' . $this->host . ':' . $this->port;
     }
 
-    public function getLastError(): ?string
-    {
-        return $this->lastError;
-    }
-
-    public function getConfigPanel(): array
-    {
-        return $this->panel ?? [];
-    }
-
-    public function getJobs(): PrinterJobs
-    {
-        return $this->jobs;
-    }
-
     /**
      * get actual status from printer
      * @return object
@@ -114,7 +88,7 @@ class BasePrinter  extends Component implements PrinterInterface
         if ($this->cacheComponentName
             && ($cache = Yii::$app->get($this->cacheComponentName, false))
         ) {
-            $cache->update($this->slug, $stats);
+            $cache->update($this->printerName, $stats);
         }
         return $stats;
     }
@@ -133,60 +107,15 @@ class BasePrinter  extends Component implements PrinterInterface
         /** @var PrinterCache $cache */
         if ($this->cacheComponentName
             && ($cache = Yii::$app->get($this->cacheComponentName, false))
-            && $cachedStats = $cache->getCacheData($this->slug)
+            && $cachedStats = $cache->getCacheData($this->printerName)
         ) {
                 return $cachedStats;
         }
         return $this->getStatusFromPrinter();
     }
 
-
-    public function getSystemStatus()
-    {
-        return $this->getStatus(self::STATUS_SYSTEM);
-    }
-
-
     /**
-     * @throws Exception
-     * @throws InvalidConfigException
-     */
-    public function getStatusData(): array
-    {
-        $systemStatus = $this->getFullStatus();
-        $systemLabels = $this->system->getLabels();
-
-        return [
-            [
-                'label' => 'HOST',
-                'value' => isset($systemStatus)
-                    ? ValueFormatter::coloredUpDownValue($systemStatus['system']['state'])
-                    : '?',
-            ],
-            [
-                'label' => Yii::t('d3printeripp', 'Cartridge'),
-                'value' => isset($status['supplies']['level'])
-                    ? ValueFormatter::coloredDangerLessValue(
-                        $status['supplies']['level'],
-                        50, //$status['supplies']['lowLevel']
-                    ) . '%'
-                    : '?',
-            ],
-            [
-                'label' => Yii::t('d3printeripp', 'IP'),
-                'value' => $status['system']['host'] ?? '?',
-            ],
-            [
-                'label' => Yii::t('d3printeripp', 'Daemon Status'),
-                'value' => isset($status['daemon']['status'])
-                    ? ValueFormatter::coloredUpDownValue($status['daemon']['status'])
-                    : '?',
-            ],
-        ];
-    }
-
-    /**
-     * @return array
+     * @return object
      * @throws Exception
      * @throws InvalidConfigException
      * @throws AuthenticationError
@@ -194,7 +123,7 @@ class BasePrinter  extends Component implements PrinterInterface
      */
     private function generateCurrentStats(): object
     {
-        $attributes = new PrinterAttributes($this);
+        $attributes = new \d3yii2\d3printeripp\components\PrinterAttributes($this);
         $attributes->getAll();
         /** @var AlertConfig $alertConfig */
         $alertConfig = Yii::$app->get($this->alertConfigComponentName, false);
@@ -204,33 +133,18 @@ class BasePrinter  extends Component implements PrinterInterface
 
 
     /**
+     * get all printer attributes
      * @throws AuthenticationError
      * @throws Exception
      * @throws HTTPError
      */
     public function getAllAttributes(): array
     {
-        $attributes = new PrinterAttributes($this);
+        $attributes = new \d3yii2\d3printeripp\components\PrinterAttributes($this);
         $attributes = $attributes->getAll();
         return $attributes->getAllAttributes();
     }
 
-
-    public function getJobsStatus(): array
-    {
-        return $this->getStatus(self::STATUS_JOBS);
-    }
-
-
-    public function getSuppliesStatus()
-    {
-        return $this->getStatus(self::STATUS_SUPPLIES);
-    }
-
-    private function getStatus(string $from)
-    {
-        return $this->{$from}->getStatus();
-    }
 
     /**
      * @return Spooler
@@ -260,9 +174,99 @@ class BasePrinter  extends Component implements PrinterInterface
         return $this
             ->getSpoolerComponent()
             ->sendToSpooler(
-                $this->slug,
+                $this->printerName,
                 $filepath,
                 $copies
             );
+    }
+
+
+    /**
+     * create email with alert message and send it
+     * @param AlertConfig $alert actual printer status
+     * @throws InvalidConfigException
+     */
+    public function sendAlertEmail(AlertConfig $alert): void
+    {
+        $companentName = $this->mailerComponentName;
+        if (!$companentName) {
+            throw new InvalidConfigException('Mailer component not configured');
+        }
+
+        if (!Yii::$app->has($companentName)) {
+            throw new InvalidConfigException('Mailer component name is invalid');
+        }
+        if (!$mailer = Yii::$app->get($companentName, false)) {
+            throw new InvalidConfigException('Mailer component is invalid');
+        }
+        $mailer->send(
+            $this->name,
+            $alert->createEmailBody()
+        );
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function printFile(
+        string $filepath,
+        int $copies = 1,
+        int $requestId = 1
+    ): IPPPayload
+    {
+        if (!file_exists($filepath)) {
+            throw new InvalidArgumentException("File '{$filepath}' does not exist");
+        }
+        return $this->printContent(file_get_contents($filepath), $copies, $requestId);
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function printContent(
+        string $content,
+        int $copies = 1,
+        int $requestId = 1
+    ): IPPPayload
+    {
+        $options = [
+//            \d3yii2\d3printeripp\types\PrinterAttributes::JOB_NAME => 'Test Print Command',
+            PrinterAttributes::COPIES => $copies,
+            PrinterAttributes::ORIENTATION_REQUESTED => $this->pageOrientation,
+            PrinterAttributes::MEDIA => $this->pageSize,
+            // Alternative approaches:
+            // 'media-size' => ['x-dimension' => 21000, 'y-dimension' => 29700], // micrometers
+            //'media-size-name' => 'iso_a4_210x297mm',
+        ];
+
+        $payload =  $this->getPrinter()->printJob($content,$requestId, $options);
+        $statusCode = (string)$payload->statusCode;
+        if ($statusCode !== 'successful-ok') {
+            throw new Exception('Error printing document. Error: ' . $statusCode);
+        }
+        return $payload;
+    }
+
+    public function getUncompletedJobs(int $requestId = 1): IPPPayload
+    {
+        return $this
+            ->getPrinter()
+            ->getJobs($requestId, 'not-completed');
+    }
+
+    /**
+     * @return Printer
+     */
+    private function getPrinter(): Printer
+    {
+        if ($this->printer) {
+            return $this->printer;
+        }
+        return $this->printer = new Printer(
+            $this->getUri(),
+            $this->username,
+            $this->password,
+            $this->curlOptions
+        );
     }
 }

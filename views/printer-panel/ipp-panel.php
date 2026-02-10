@@ -1,51 +1,66 @@
 <?php
 
 use d3yii2\d3printeripp\components\AlertConfig;
-use d3yii2\d3printeripp\components\HPPrinter;
+use d3yii2\d3printeripp\components\BasePrinter;
 use eaBlankonThema\widget\ThExternalLink;
 use eaBlankonThema\widget\ThPanel;
 
 /**
- * @var HPPrinter $printer
+ * @var string $errorMessage
+ * @var BasePrinter $printer
  * @var AlertConfig $alert
  */
 
-$header = ThExternalLink::widget([
+
+ThPanel::widget();
+$body = '';
+if ($errorMessage) {
+    $body .= '<div class="alert alert-danger">'.$errorMessage.'</div>';
+}
+if ($printer) {
+    $header = ThExternalLink::widget([
         'url' => 'https://' . $printer->host,
         'text' => $printer->name
     ]);
-
-$body = '
+    $body .= '
 <div class="table-responsive">
     <table class="table">
         <tbody>
-';
-$body .= '<tr>
-        <td>IP</td>
-        <td>'.$printer->host.':'.$printer->port.'</td>
-        </tr>';
-foreach ($alert->getDisplayList() as $item) {
-    $class = '';
-    if ($item['isWarning']) {
-        $class = ' class="warning"';
-    }
-    if ($item['isError']) {
-        $class = ' class="danger"';
-    }
-    $body .= '<tr>
-        <td>'.$item['label'].'</td>
-        <td'.$class.'>'.$item['value'].'</td>
-        </tr>';
+            <tr>
+                <td>IP</td>
+                <td>'.$printer->host.':'.$printer->port.'</td>
+            </tr>';
+} else {
+    $header = 'Printer Error';
 }
 
-$body .= '<tr>
-        <td>Informācija atjaunota</td>
-        <td>'.$alert->loadedTime.'</td>
+if ($alert) {
+    foreach ($alert->getDisplayList() as $item) {
+        $class = '';
+        if ($item['isWarning']) {
+            $class = ' class="warning"';
+        }
+        if ($item['isError']) {
+            $class = ' class="danger"';
+        }
+        $body .= '<tr>
+        <td>' . $item['label'] . '</td>
+        <td' . $class . '>' . $item['value'] . '</td>
         </tr>';
+    }
 
+    $body .= '<tr>
+        <td>Informācija atjaunota</td>
+        <td>' . $alert->loadedTime . '</td>
+        </tr>';
+}
 $body .= '</tbody></table></div>';
 $collapsed = true;
-if ($alert->hasError()) {
+if ($errorMessage
+    || !$printer
+    || !$alert
+    || $alert->hasError()
+) {
     $type = ThPanel::TYPE_DANGER;
     $collapsed = false;
 } elseif ($alert->hasWarning()) {
