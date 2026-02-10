@@ -8,7 +8,7 @@ use obray\ipp\exceptions\AuthenticationError;
 use obray\ipp\exceptions\HTTPError;
 use obray\ipp\types\Operation;
 use yii\base\Exception;
-use d3yii2\d3printeripp\obray\PrinterAttributes as IPPPrinterAttributes;
+use obray\ipp\PrinterAttributes as IPPPrinterAttributes;
 use d3yii2\d3printeripp\types\PrinterAttributes as PrinterAttributeType;
 
 /**
