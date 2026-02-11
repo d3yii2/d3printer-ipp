@@ -2,7 +2,6 @@
 
 namespace d3yii2\d3printeripp\components\rules;
 
-use d3yii2\d3printeripp\components\rules\RulesInterface;
 use d3yii2\d3printeripp\types\PrinterAttributes;
 
 class PrinterInfo implements RulesInterface

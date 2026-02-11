@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace d3yii2\d3printeripp\components;
 
 use d3yii2\d3printeripp\components\rules\RulesInterface;
+use obray\ipp\PrinterAttributes as IPPPrinterAttributes;
 use yii\base\Component;
 
 
@@ -44,13 +45,14 @@ abstract class AlertConfig extends Component
         return $this->rules();
     }
 
-    public function loadAttributes(PrinterAttributes $attributes): void
+
+    public function loadAttributes(IPPPrinterAttributes $attributes): void
     {
         $this->loadedTime = date('Y-m-d H:i:s');
         foreach ($this->getRules() as $rule) {
             $ruleClassName = $rule['className'];
-            $ruleAttributes = $attributes
-                ->getAttribute($ruleClassName::getAttributeName());
+            $ruleAttributeName = $ruleClassName::getAttributeName();
+            $ruleAttributes = $attributes->$ruleAttributeName;
 
             if (!is_array($ruleAttributes)) {
                 $ruleAttributes = [$ruleAttributes];

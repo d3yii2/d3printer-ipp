@@ -10,11 +10,13 @@ use InvalidArgumentException;
 use obray\ipp\exceptions\AuthenticationError;
 use obray\ipp\exceptions\HTTPError;
 use obray\ipp\Printer;
+use obray\ipp\PrinterAttributes as IPPPrinterAttributes;
 use obray\ipp\transport\IPPPayload;
 use Yii;
 use yii\base\Component;
 use yii\base\Exception;
 use yii\base\InvalidConfigException;
+use yii\helpers\VarDumper;
 
 /**
  * Base class for printer implementations
@@ -123,8 +125,7 @@ class BasePrinter  extends Component implements PrinterInterface
      */
     private function generateCurrentStats(): object
     {
-        $attributes = new \d3yii2\d3printeripp\components\PrinterAttributes($this);
-        $attributes->getAll();
+        $attributes = $this->getPrinterAttributes();
         /** @var AlertConfig $alertConfig */
         $alertConfig = Yii::$app->get($this->alertConfigComponentName, false);
         $alertConfig->loadAttributes($attributes);
@@ -140,9 +141,7 @@ class BasePrinter  extends Component implements PrinterInterface
      */
     public function getAllAttributes(): array
     {
-        $attributes = new \d3yii2\d3printeripp\components\PrinterAttributes($this);
-        $attributes = $attributes->getAll();
-        return $attributes->getAllAttributes();
+        return $this->getPrinterAttributes()->getAllAttributes();
     }
 
 
@@ -230,7 +229,7 @@ class BasePrinter  extends Component implements PrinterInterface
     ): IPPPayload
     {
         $options = [
-//            \d3yii2\d3printeripp\types\PrinterAttributes::JOB_NAME => 'Test Print Command',
+
             PrinterAttributes::COPIES => $copies,
             PrinterAttributes::ORIENTATION_REQUESTED => $this->pageOrientation,
             PrinterAttributes::MEDIA => $this->pageSize,
@@ -268,5 +267,23 @@ class BasePrinter  extends Component implements PrinterInterface
             $this->password,
             $this->curlOptions
         );
+    }
+
+    /**
+     * @throws AuthenticationError
+     * @throws Exception
+     * @throws HTTPError
+     */
+    public function getPrinterAttributes(): IPPPrinterAttributes
+    {
+        $responsePayload = $this->getPrinter()->getAttributes();
+        $printerAttributes = $responsePayload->printerAttributes ?? null;
+        if ($printerAttributes
+            &&!empty($printerAttributes[0])
+            && $printerAttributes[0] instanceof IPPPrinterAttributes
+        ) {
+            return $printerAttributes[0];
+        }
+        throw new Exception('Error Requesting Printer attributes: ' . VarDumper::dumpAsString($responsePayload));
     }
 }

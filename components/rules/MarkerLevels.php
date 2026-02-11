@@ -2,7 +2,7 @@
 
 namespace d3yii2\d3printeripp\components\rules;
 
-use d3yii2\d3printeripp\components\rules\CsvString;
+
 use d3yii2\d3printeripp\types\PrinterAttributes;
 
 /**
