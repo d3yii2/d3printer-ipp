@@ -149,9 +149,9 @@ class BasePrinter  extends Component implements PrinterInterface
      * @return Spooler
      * @throws InvalidConfigException
      */
-    public function getSpoolerComponent(): ?Spooler
+    public function getSpoolerComponent(): Spooler
     {
-        if ($this->printerSpooler) {
+        if ($this->printerSpooler !== null) {
             return $this->printerSpooler;
         }
         if (!$this->printerSpooler = Yii::$app->get($this->spoolerComponentName, false)) {
@@ -285,5 +285,23 @@ class BasePrinter  extends Component implements PrinterInterface
             return $printerAttributes[0];
         }
         throw new Exception('Error Requesting Printer attributes: ' . VarDumper::dumpAsString($responsePayload));
+    }
+
+    /**
+     * @throws Exception
+     * @throws InvalidConfigException
+     */
+    public function getSpoolDirectoryFiles(): array
+    {
+        return $this
+            ->getSpoolerComponent()
+            ->getSpoolDirectoryFiles($this->printerName);
+    }
+
+    public function deleteSpoolDirectoryFile(string $filename): bool
+    {
+        return $this
+            ->getSpoolerComponent()
+            ->deleteSpoolFile($this->printerName, $filename);
     }
 }
