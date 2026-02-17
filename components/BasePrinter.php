@@ -59,6 +59,10 @@ class BasePrinter  extends Component implements PrinterInterface
      * @var mixed
      */
     private ?Printer $printer = null;
+    /**
+     * @var mixed
+     */
+    public ?string $printerComponentName = null;
 
 
     public function getUsername(): ?string
@@ -84,9 +88,9 @@ class BasePrinter  extends Component implements PrinterInterface
      * @throws HTTPError
      * @throws InvalidConfigException
      */
-    public function getStatusFromPrinter(): object
+    public function getStatusFromPrinter(bool $withAttributes = true): object
     {
-        $stats = $this->generateCurrentStats();
+        $stats = $this->generateCurrentStats($withAttributes);
         if ($this->cacheComponentName
             && ($cache = Yii::$app->get($this->cacheComponentName, false))
         ) {
@@ -113,7 +117,10 @@ class BasePrinter  extends Component implements PrinterInterface
         ) {
                 return $cachedStats;
         }
-        return $this->getStatusFromPrinter();
+        /**
+         * do not send request to printer for avoiding long time processing
+         */
+        return $this->getStatusFromPrinter(false);
     }
 
     /**
@@ -123,12 +130,26 @@ class BasePrinter  extends Component implements PrinterInterface
      * @throws AuthenticationError
      * @throws HTTPError
      */
-    private function generateCurrentStats(): object
+    private function generateCurrentStats(bool $withAttributes = true): object
     {
-        $attributes = $this->getPrinterAttributes();
+        if ($withAttributes) {
+            $attributes = $this->getPrinterAttributes();
+        } else {
+            $attributes = null;
+        }
         /** @var AlertConfig $alertConfig */
         $alertConfig = Yii::$app->get($this->alertConfigComponentName, false);
         $alertConfig->loadAttributes($attributes);
+        foreach ($alertConfig->loadedRule as &$rule) {
+            if (property_exists($rule, 'printerComponentName')) {
+                $rule->printerComponentName = $this->printerComponentName;
+            }
+            if (property_exists($rule, 'dataUpdatedTime')) {
+                $rule->dataUpdatedTime = date('Y-m-d H:i:s');
+            }if (property_exists($rule, 'countFilesInSpooler')) {
+                $rule->countFilesInSpooler = $this->countSpoolDirectoryFiles();
+            }
+        }
         return $alertConfig;
     }
 
@@ -296,6 +317,15 @@ class BasePrinter  extends Component implements PrinterInterface
         return $this
             ->getSpoolerComponent()
             ->getSpoolDirectoryFiles($this->printerName);
+    }
+
+    /**
+     * @throws Exception
+     * @throws InvalidConfigException
+     */
+    public function countSpoolDirectoryFiles(): int
+    {
+        return count($this->getSpoolDirectoryFiles());
     }
 
     public function deleteSpoolDirectoryFile(string $filename): bool

@@ -2,6 +2,7 @@
 
 namespace d3yii2\d3printeripp\controllers;
 
+use d3yii2\d3printeripp\components\BasePrinter;
 use d3yii2\d3printeripp\Module;
 use Exception;
 use unyii2\yii2panel\Controller;
@@ -49,15 +50,17 @@ class PrinterPanelController extends Controller
                 $errorMessage = 'Not found printer component with name: "' . $printerComponentName . '"';
                 Yii::error($errorMessage);
             }
+            /** @var BasePrinter $printer */
             if (!$printer = Yii::$app->get($printerComponentName)) {
                 $errorMessage = 'Not found printer component with name: "' . $printerComponentName . '"';
                 Yii::error($errorMessage);
             }
             if ($printer) {
+                $printer->printerComponentName = $printerComponentName;
                 $alert = $printer->getStatusFromCache();
             }
         } catch (Exception $e) {
-            Yii::error($e->getMessage() . PHP_EOL . $e->getTraceAsString());
+            Yii::error($e);
             $errorMessage = $e->getMessage();
         }
         return $this->render(

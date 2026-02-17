@@ -1,7 +1,9 @@
 <?php
 
+use cornernote\returnurl\ReturnUrl;
 use d3yii2\d3printeripp\components\AlertConfig;
 use d3yii2\d3printeripp\components\BasePrinter;
+use eaBlankonThema\widget\ThButton;
 use eaBlankonThema\widget\ThExternalLink;
 use eaBlankonThema\widget\ThPanel;
 
@@ -36,6 +38,25 @@ if ($printer) {
 
 if ($alert) {
     foreach ($alert->getDisplayList() as $item) {
+        if ($item['ruleObject']::getType() === $item['ruleObject']::TYPE_PRINT) {
+            $link = $item['ruleObject']->getValueLabel();
+            $link['ru'] = ReturnUrl::getToken();
+            $displayValue = ThButton::widget([
+                'icon' => ThButton::ICON_PRINT,
+                'type' => ThButton::TYPE_SUCCESS,
+                'link' => $link
+            ]);
+        } elseif ($item['ruleObject']::getType() === $item['ruleObject']::TYPE_RELOAD) {
+            $link = $item['ruleObject']->getValueLabel();
+            $link['ru'] = ReturnUrl::getToken();
+            $displayValue = ThButton::widget([
+                'icon' => ThButton::ICON_REFRESH,
+                'type' => ThButton::TYPE_SUCCESS,
+                'link' => $link
+            ]);
+        } else {
+            $displayValue = $item['value'];
+        }
         $class = '';
         if ($item['isWarning']) {
             $class = ' class="warning"';
@@ -45,14 +66,9 @@ if ($alert) {
         }
         $body .= '<tr>
         <td>' . $item['label'] . '</td>
-        <td' . $class . '>' . $item['value'] . '</td>
+        <td' . $class . '>' . $displayValue . '</td>
         </tr>';
     }
-
-    $body .= '<tr>
-        <td>Informācija atjaunota</td>
-        <td>' . $alert->loadedTime . '</td>
-        </tr>';
 }
 $body .= '</tbody></table></div>';
 $collapsed = true;

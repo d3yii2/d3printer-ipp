@@ -1,121 +1,101 @@
 <?php
 
 namespace d3yii2\d3printeripp\controllers;
-// ===================================================================
-// USAGE EXAMPLES
-// ===================================================================
-use yii\web\NotFoundHttpException;
+
+use cornernote\returnurl\ReturnUrl;
+use d3system\helpers\FlashHelper;
+use d3yii2\d3printeripp\components\BasePrinter;
+use d3yii2\d3printeripp\Module;
+use Exception;
+use obray\ipp\exceptions\AuthenticationError;
+use obray\ipp\exceptions\HTTPError;
+use Yii;
+use yii\base\InvalidConfigException;
+use yii\filters\AccessControl;
+use yii\web\Controller;
+use yii\web\Response;
 
 /**
- * Example Controller showing how to use the Printer Manager
+ * @property Module $module
  */
-class PrinterController extends \yii\web\Controller
+class PrinterController extends Controller
 {
+
+    public function behaviors(): array
+    {
+        return [
+            'access' => [
+                'class' => AccessControl::class,
+                'rules' => [
+                    [
+                        'allow' => true,
+                        'actions' => [
+                            'print',
+                            'reload-status',
+                        ],
+                        'roles' => $this->module->panelViewRoleNames ?? ['@'],
+                    ],
+                ],
+            ],
+        ];
+    }
+
     /**
+     *
      * Print a document
      */
-    public function actionPrint()
+    public function actionPrint(string $printerComponentName): Response
     {
         try {
-            // Get the printer manager component
-            $printerIPP = Yii::$app->printerIPP;
+            /** @var BasePrinter $printer */
+            $printer = Yii::$app->get($printerComponentName);
+            $leftMargin = 72;
+            $lineStep = 18;
+            // Create a simple test document (PostScript)
+            $testDocument = "%!PS-Adobe-3.0\n";
+            $testDocument .= "72 720 moveto\n";
+            $testDocument .= "/Times-Roman findfont 14 scalefont setfont\n";
+            $testDocument .= '(' . date('Y-m-d H:i:s') . ") show\n";
+            $testDocument .= $leftMargin . " currentpoint exch pop " . (-$lineStep) . " add moveto\n";
+            $testDocument .= '(Printer component: ' . $printerComponentName . "\n) show\n";
+            $testDocument .= $leftMargin . " currentpoint exch pop " . (-$lineStep) . " add moveto\n";
+            $testDocument .= '(Printer ip: ' . $printer->host . ':' . $printer->port . "\n) show\n";
+            $testDocument .= "showpage\n";
 
-            // Example document content (could be PDF, PostScript, etc.)
-            $document = file_get_contents('/path/to/document.pdf');
-
-            // Print options
-            $options = [
-                'job-name' => 'Test Document',
-                'copies' => 2,
-                'media' => 'iso_a4_210x297mm',
-                'sides' => 'two-sided-long-edge'
-            ];
-
-            // Print to specific printer
-            $result = $printerIPP->printBySlug('office_hp', $document, $options);
-
-            if ($result['success']) {
-                return $this->asJson([
-                    'status' => 'success',
-                    'job_id' => $result['job-id'],
-                    'message' => 'Document sent to printer successfully'
-                ]);
+            $result = $printer->printContent($testDocument);
+            if ($result->statusCode->getClass() === 'successful') {
+                FlashHelper::addSuccess('Document printed successfully');
             } else {
-                return $this->asJson([
-                    'status' => 'error',
-                    'message' => 'Failed to print document'
-                ]);
+                FlashHelper::addError('Error printing document. Error: ' . $result->statusCode->getClass());
             }
-
-        } catch (\Exception $e) {
-            return $this->asJson([
-                'status' => 'error',
-                'message' => $e->getMessage()
-            ]);
+        } catch (Exception $e) {
+            FlashHelper::addError('Error printing document. Error: ' . $e->getMessage());
+            Yii::error($e);
         }
+        return $this->redirect(ReturnUrl::getUrl());
     }
 
     /**
-     * Get printer health status
+     * @throws InvalidConfigException
+     * @throws HTTPError
+     * @throws AuthenticationError
+     * @throws \yii\base\Exception
      */
-    public function actionHealth(string $slug)
+    public function actionReloadStatus(string $printerComponentName): Response
     {
-        $printerIPP = Yii::$app->printerIPP;
-        $health = $printerIPP->getHealthStatus($slug);
-
-        return $this->asJson($health);
-    }
-
-    /**
-     * Get specific printer status
-     * @throws NotFoundHttpException
-     */
-    public function actionStatus($slug): \yii\web\Response
-    {
-        $printerIPP = Yii::$app->printerIPP;
-        $printer = $printerIPP->getPrinter($slug);
-
-        if (!$printer) {
-            throw new \yii\web\NotFoundHttpException("Printer not found");
+        if (!Yii::$app->has($printerComponentName)) {
+            $errorMessage = 'Not found printer component with name: "' . $printerComponentName . '"';
+            Yii::error($errorMessage);
         }
-
-        try {
-            $status = [
-                'online' => $printer->isOnline(),
-                'status' => $printer->getStatus(),
-                'supplies' => $printer->getSuppliesStatus(),
-                'system_info' => $printer->getSystemInfo(),
-                'jobs' => $printer->getJobs()
-            ];
-
-            return $this->asJson($status);
-
-        } catch (\Exception $e) {
-            return $this->asJson([
-                'error' => $e->getMessage(),
-                'online' => false
-            ]);
+        /** @var BasePrinter $printer */
+        if (!$printer = Yii::$app->get($printerComponentName)) {
+            $errorMessage = 'Not found printer component with name: "' . $printerComponentName . '"';
+            Yii::error($errorMessage);
         }
-    }
-
-    /**
-     * Cancel a print job
-     * @throws NotFoundHttpException
-     */
-    public function actionCancelJob($slug, $jobId): \yii\web\Response
-    {
-        $printerIPP = Yii::$app->printerIPP;
-        $printer = $printerIPP->getPrinter($slug);
-
-        if (!$printer) {
-            throw new \yii\web\NotFoundHttpException('Printer not found');
+        if ($printer) {
+            $printer->printerComponentName = $printerComponentName;
+            $printer->getStatusFromPrinter();
         }
-
-        $success = $printer->cancelJob((int)$jobId);
-
-        return $this->asJson([
-            'success' => $success,
-            'message' => $success ? 'Job cancelled successfully' : 'Failed to cancel job'
-        ]);
+        return $this->redirect(ReturnUrl::getUrl());
     }
 }

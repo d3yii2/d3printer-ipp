@@ -2,32 +2,27 @@
 
 namespace d3yii2\d3printeripp\components\rules;
 
-use d3yii2\d3printeripp\types\PrinterAttributes;
-
-class PrinterInfo implements RulesInterface
+class PrintTestPage implements RulesInterface
 {
 
-
-    private string $value;
-
-
-    public function __construct(string $value)
-    {
-        $this->value = $value;
-    }
+    public ?string $printerComponentName = null;
 
     public static function getAttributeName(): string
     {
-        return PrinterAttributes::PRINTER_INFO;
+        return '';
     }
+
     public function getLabel(): string
     {
-        return 'Informācija';
+        return 'Izdruka';
     }
 
     public function getValueLabel()
     {
-        return $this->value;
+        return [
+            '/d3printeripp/printer/print',
+            'printerComponentName' => $this->printerComponentName,
+        ];
     }
 
     public function isWarning(): bool
@@ -52,6 +47,6 @@ class PrinterInfo implements RulesInterface
 
     public static function getType(): string
     {
-        return self::TYPE_RULE;
+        return self::TYPE_PRINT;
     }
 }

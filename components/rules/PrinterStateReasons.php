@@ -37,7 +37,7 @@ class PrinterStateReasons implements RulesInterface
         return 'Iemesls';
     }
 
-    public function getValueLabel(): string
+    public function getValueLabel()
     {
         return self::REASONS_MAP[$this->value] ?? 'unknown';
     }
@@ -60,5 +60,10 @@ class PrinterStateReasons implements RulesInterface
     public function getErrorMessage(): string
     {
         return 'Nestrādā: ' . $this->getValueLabel();
+    }
+
+    public static function getType(): string
+    {
+        return self::TYPE_RULE;
     }
 }

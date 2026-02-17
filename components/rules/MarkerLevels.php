@@ -43,10 +43,10 @@ class MarkerLevels implements RulesInterface
 
     public function getLabel(): string
     {
-        return 'Kātridžš';
+        return 'Kārtridžš';
     }
 
-    public function getValueLabel(): string
+    public function getValueLabel()
     {
         return $this->value . '%';
     }
@@ -69,5 +69,10 @@ class MarkerLevels implements RulesInterface
     public function getErrorMessage(): string
     {
         return '';
+    }
+
+    public static function getType(): string
+    {
+        return self::TYPE_RULE;
     }
 }

@@ -24,11 +24,7 @@ abstract class AlertConfig extends Component
 
 
     /** @var RulesInterface[]  */
-    private array $loadedRule = [];
-
-
-    public string $loadedTime = '';
-
+    public array $loadedRule = [];
     public bool $isWarningChanged = false;
 
     /**
@@ -46,11 +42,19 @@ abstract class AlertConfig extends Component
     }
 
 
-    public function loadAttributes(IPPPrinterAttributes $attributes): void
+    public function loadAttributes(
+        ?IPPPrinterAttributes $attributes = null
+    ): void
     {
-        $this->loadedTime = date('Y-m-d H:i:s');
         foreach ($this->getRules() as $rule) {
             $ruleClassName = $rule['className'];
+            if ($ruleClassName::getType() !== RulesInterface::TYPE_RULE) {
+                $this->loadedRule[] = new $ruleClassName();
+                continue;
+            }
+            if (!$attributes) {
+                continue;
+            }
             $ruleAttributeName = $ruleClassName::getAttributeName();
             $ruleAttributes = $attributes->$ruleAttributeName;
 
@@ -125,7 +129,8 @@ abstract class AlertConfig extends Component
      *      label: string,
      *      value: string,
      *      isWarning: bool,
-     *      isError: bool
+     *      isError: bool,
+     *     ruleObject: RulesInterface
      *  }>
      */
     public function getDisplayList(): array
@@ -137,6 +142,7 @@ abstract class AlertConfig extends Component
                 'value' => $ruleObject->getValueLabel(),
                 'isWarning' => $ruleObject->isWarning(),
                 'isError' => $ruleObject->isError(),
+                'ruleObject' => $ruleObject
             ];
         }
         return $list;

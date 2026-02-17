@@ -17,7 +17,7 @@ class PrinterCache extends Component
     private const UPDATED_AT = 'updated';
 
     public ?string $cachePath = 'ippPrinterCache';
-    public int $cacheDuration = 30;
+    public int $cacheDuration = 60;
 
     private Cache $cache;
 
@@ -36,14 +36,14 @@ class PrinterCache extends Component
 
     /**
      * @param string $printerSlug
-     * @param array $data
+     * @param  $data
      * @return void
      */
-    public function update(string $printerSlug, array $data): void
+    public function update(string $printerSlug, $data): void
     {
         $this->cache->set(
             $this->getCacheKey($printerSlug),
-            self::enrichDataWithTimestamp($data),
+            $data,
             $this->cacheDuration
         );
     }
@@ -59,22 +59,12 @@ class PrinterCache extends Component
 
     /**
      * @param string $printerSlug
-     * @return object
+     * @return object|false
      */
-    public function getCacheData(string $printerSlug): object
+    public function getCacheData(string $printerSlug)
     {
-        $data = $this->cache->get($this->getCacheKey($printerSlug));
-        return is_array($data) ? $data : [];
-    }
+        return $this->cache->get($this->getCacheKey($printerSlug));
 
-    /**
-     * @param array $data
-     * @return array
-     */
-    private static function enrichDataWithTimestamp(array $data): array
-    {
-        $data[self::UPDATED_AT] = date('Y-m-d H:i:s');
-        return $data;
     }
 }
 

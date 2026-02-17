@@ -47,4 +47,9 @@ class PrinterState extends \obray\ipp\enums\PrinterState implements RulesInterfa
     {
         return 'Problēma: "' . $this->getValueLabel() . '"';
     }
+
+    public static function getType(): string
+    {
+        return self::TYPE_RULE;
+    }
 }

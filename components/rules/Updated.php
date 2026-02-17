@@ -2,32 +2,24 @@
 
 namespace d3yii2\d3printeripp\components\rules;
 
-use d3yii2\d3printeripp\types\PrinterAttributes;
-
-class PrinterInfo implements RulesInterface
+class Updated implements RulesInterface
 {
 
-
-    private string $value;
-
-
-    public function __construct(string $value)
-    {
-        $this->value = $value;
-    }
+    public ?string $dataUpdatedTime = null;
 
     public static function getAttributeName(): string
     {
-        return PrinterAttributes::PRINTER_INFO;
+        return '';
     }
+
     public function getLabel(): string
     {
-        return 'Informācija';
+        return 'Informācija atjaunota';
     }
 
     public function getValueLabel()
     {
-        return $this->value;
+        return $this->dataUpdatedTime;
     }
 
     public function isWarning(): bool
@@ -52,6 +44,6 @@ class PrinterInfo implements RulesInterface
 
     public static function getType(): string
     {
-        return self::TYPE_RULE;
+        return self::TYPE_OTHER;
     }
 }

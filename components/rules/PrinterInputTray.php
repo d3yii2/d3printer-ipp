@@ -70,7 +70,7 @@ class PrinterInputTray implements RulesInterface
         return 'Papīra padeve';
     }
 
-    public function getValueLabel(): string
+    public function getValueLabel()
     {
         return self::STATUS_MAP[$this->value] ?? 'unknown [' . $this->value . ']';
     }
@@ -91,5 +91,10 @@ class PrinterInputTray implements RulesInterface
     public function getErrorMessage(): string
     {
         return 'Papra padeves kļūda: "' . $this->getValueLabel() . '"';
+    }
+
+    public static function getType(): string
+    {
+        return self::TYPE_RULE;
     }
 }

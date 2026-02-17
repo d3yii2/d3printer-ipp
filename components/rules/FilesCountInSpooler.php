@@ -2,32 +2,24 @@
 
 namespace d3yii2\d3printeripp\components\rules;
 
-use d3yii2\d3printeripp\types\PrinterAttributes;
-
-class PrinterInfo implements RulesInterface
+class FilesCountInSpooler implements RulesInterface
 {
 
-
-    private string $value;
-
-
-    public function __construct(string $value)
-    {
-        $this->value = $value;
-    }
+    public ?int $countFilesInSpooler = null;
 
     public static function getAttributeName(): string
     {
-        return PrinterAttributes::PRINTER_INFO;
+        return '';
     }
+
     public function getLabel(): string
     {
-        return 'Informācija';
+        return 'Faili spūlerī';
     }
 
     public function getValueLabel()
     {
-        return $this->value;
+        return $this->countFilesInSpooler;
     }
 
     public function isWarning(): bool
@@ -37,7 +29,7 @@ class PrinterInfo implements RulesInterface
 
     public function isError(): bool
     {
-        return false;
+        return $this->countFilesInSpooler > 0;
     }
 
     public function getWarningMessage(): string
@@ -47,11 +39,14 @@ class PrinterInfo implements RulesInterface
 
     public function getErrorMessage(): string
     {
+        if ($this->countFilesInSpooler > 0) {
+            return 'Spūlerī ir ' . $this->countFilesInSpooler . ' faili';
+        }
         return '';
     }
 
     public static function getType(): string
     {
-        return self::TYPE_RULE;
+        return self::TYPE_OTHER;
     }
 }
