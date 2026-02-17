@@ -19,7 +19,7 @@ class PrintSpooler extends Component
 
     public function run(): void
     {
-        /** @var BasePrinter[] $printers */
+        /** @var BasePrinter|string[] $printers */
         $printers = [];
         $printerProblems = [];
         $printerFilesProblems = [];
@@ -53,7 +53,8 @@ class PrintSpooler extends Component
 
             /**
              * if printer no loaded, ignore it
-             */
+            * @var BasePrinter|null $printer
+            */
             if (!$printer = $printers[$printerComponentName] ?? null) {
                 continue;
             }
@@ -84,7 +85,7 @@ class PrintSpooler extends Component
                     $this->out($printerComponentName . ': Print file: ' . $file);
                     $printer->printFile($file);
                 } catch (Exception $e) {
-                    $msg = 'Try to get spool directory files.'
+                    $msg = 'Try print file.'
                         . ' Printer component: ' . $printerComponentName
                         . ' File: ' . $file;
                     if (!($printerFilesProblems[$printerComponentName][$file] ?? false)) {
@@ -100,10 +101,10 @@ class PrintSpooler extends Component
                     continue;
                 }
                 try {
-                    if (!$printer->deleteSpoolFile($file)
+                    if (!$printer->deleteSpoolDirectoryFile($file)
                         && !in_array($file, $canNotUnlinkFiles, true)
                     ) {
-                        $canNotUnlinkFiles[$printerComponentName][] = $file;
+                        $canNotUnlinkFiles[] = $file;
                         $msg = 'Can not delete file: '
                             . ' Printer component: ' . $printerComponentName
                             . ' File: ' . $file;

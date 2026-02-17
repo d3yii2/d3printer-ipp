@@ -2,7 +2,6 @@
 
 namespace d3yii2\d3printeripp\components;
 
-use d3yii2\d3printer\components\Spooler;
 use d3yii2\d3printeripp\interfaces\PrinterInterface;
 use d3yii2\d3printeripp\types\PrinterAttributes;
 use d3yii2\d3printeripp\types\PrinterAttributeValues;

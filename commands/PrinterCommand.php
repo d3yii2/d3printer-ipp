@@ -49,9 +49,6 @@ class PrinterCommand extends D3CommandController
         bool $sendAlertMessage = false
     ): int
     {
-        $e = new \yii\db\Exception('tests');
-        Yii::error(['msg' => 'test msg 2', 'exception' => $e]);
-        exit;
         if (!Yii::$app->has($printerComponentName)) {
             $this->out('Not found printer component with slug: "' . $printerComponentName . '"');
             return ExitCode::CONFIG;
