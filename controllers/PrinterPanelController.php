@@ -49,13 +49,11 @@ class PrinterPanelController extends Controller
             if (!Yii::$app->has($printerComponentName)) {
                 $errorMessage = 'Not found printer component with name: "' . $printerComponentName . '"';
                 Yii::error($errorMessage);
-            }
-            /** @var BasePrinter $printer */
-            if (!$printer = Yii::$app->get($printerComponentName)) {
+                /** @var BasePrinter $printer */
+            } elseif (!$printer = Yii::$app->get($printerComponentName)) {
                 $errorMessage = 'Not found printer component with name: "' . $printerComponentName . '"';
                 Yii::error($errorMessage);
-            }
-            if ($printer) {
+            } else {
                 $printer->printerComponentName = $printerComponentName;
                 $alert = $printer->getStatusFromCache();
             }
