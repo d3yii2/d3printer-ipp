@@ -13,6 +13,9 @@
     "require": {
         "php": ">=7.4",
         "yiisoft/yii2": "~2.0.14",
+        "d3yii2/d3system": "*",
+        "cornernote/yii2-returnurl": "*",
+        "unyii2/yii2-panel": "*",
         "obray/ipp": "*",
         "ext-curl": "*"
     },
