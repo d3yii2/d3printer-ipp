@@ -167,6 +167,9 @@ abstract class AlertConfig extends Component
         }
         $list = [];
         foreach ($this->getDisplayList() as $item) {
+            if (is_array($item['value'])) {
+                continue;
+            }
             $list[] = $item['label'] . ': ' . $item['value'];
         }
         $html .= 'Status: <br>- ' . implode('<br>- ', $list);

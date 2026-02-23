@@ -203,7 +203,5 @@ class PrinterCommand extends D3CommandController
         echo 'printed :' . VarDumper::dumpAsString($result);
         $result = $printer->getUncompletedJobs();
         echo 'Uncompleted :' .  VarDumper::dumpAsString($result);
-
-
     }
 }

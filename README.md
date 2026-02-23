@@ -129,3 +129,15 @@ create deamon or add to crontab
 php yii printeripp/status ippTest 0 1
 ```
     
+# set on system
+ - in web config define module d3printeripp. Use in dashboard panel.
+ - create service components. If neccesery many same configuration for printers, use same components:
+   - ippAlertConfig - alert configuration - create class lika doc/examples/IppPrinter3002dnAlertConfig.php  
+   - ippPrinterMailer - for sending alert email
+   - printerSpooler - for spooling files for printers
+   - printerStatusCache - for cashing actual printer actual status. Use in dashboard panel
+   - spoolerPrinting - for daemon, what print files to printer
+ - add to dashboard panel.
+ - create crontab job for printer monitoring: php yii printeripp/status atlikumiMpPrinterIpp 0 1
+ - create daemon for printing spooled foles to printers: php yii printeripp-spool/index spoolerPrinting printercomponent1,printercomponent2 
+  

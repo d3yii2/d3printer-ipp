@@ -62,6 +62,7 @@ class BasePrinter  extends Component implements PrinterInterface
      * @var mixed
      */
     public ?string $printerComponentName = null;
+    private ?PrinterCache $cache = null;
 
 
     public function getUsername(): ?string
@@ -81,6 +82,7 @@ class BasePrinter  extends Component implements PrinterInterface
 
     /**
      * get actual status from printer
+     * @param bool $withAttributes
      * @return object
      * @throws AuthenticationError
      * @throws Exception
@@ -90,9 +92,7 @@ class BasePrinter  extends Component implements PrinterInterface
     public function getStatusFromPrinter(bool $withAttributes = true): object
     {
         $stats = $this->generateCurrentStats($withAttributes);
-        if ($this->cacheComponentName
-            && ($cache = Yii::$app->get($this->cacheComponentName, false))
-        ) {
+        if ($cache = $this->getCache()) {
             $cache->update($this->printerName, $stats);
         }
         return $stats;
@@ -110,8 +110,7 @@ class BasePrinter  extends Component implements PrinterInterface
     {
 
         /** @var PrinterCache $cache */
-        if ($this->cacheComponentName
-            && ($cache = Yii::$app->get($this->cacheComponentName, false))
+        if (($cache = $this->getCache())
             && $cachedStats = $cache->getCacheData($this->printerName)
         ) {
                 return $cachedStats;
@@ -123,11 +122,26 @@ class BasePrinter  extends Component implements PrinterInterface
     }
 
     /**
-     * @return object
-     * @throws Exception
      * @throws InvalidConfigException
+     */
+    private function getCache(): ?PrinterCache
+    {
+        if (!$this->cacheComponentName) {
+            return null;
+        }
+        if ($this->cache) {
+            return $this->cache;
+        }
+        return $this->cache = Yii::$app->get($this->cacheComponentName, false);
+    }
+
+    /**
+     * @param bool $withAttributes
+     * @return object
      * @throws AuthenticationError
+     * @throws Exception
      * @throws HTTPError
+     * @throws InvalidConfigException
      */
     private function generateCurrentStats(bool $withAttributes = true): object
     {
