@@ -218,6 +218,7 @@ class BasePrinter  extends Component implements PrinterInterface
      * create email with alert message and send it
      * @param AlertConfig $alert actual printer status
      * @throws InvalidConfigException
+     * @throws Exception
      */
     public function sendAlertEmail(AlertConfig $alert): void
     {
@@ -229,13 +230,17 @@ class BasePrinter  extends Component implements PrinterInterface
         if (!Yii::$app->has($companentName)) {
             throw new InvalidConfigException('Mailer component name is invalid');
         }
+
+        /** @var Mailer $mailer */
         if (!$mailer = Yii::$app->get($companentName, false)) {
             throw new InvalidConfigException('Mailer component is invalid');
         }
-        $mailer->send(
+        if (!$mailer->send(
             $this->name,
             $alert->createEmailBody()
-        );
+        )) {
+            throw new Exception('Error sending alert email');
+        };
     }
 
     /**

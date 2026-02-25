@@ -21,7 +21,7 @@ final class Mailer extends Component
         string $printerComponentName,
         string $body,
         string $deviceName = 'printer'
-    ): void {
+    ): bool {
         $subject = Yii::t(
             'd3printeripp',
             $this->subject,
@@ -31,7 +31,7 @@ final class Mailer extends Component
                 'deviceName' => $deviceName
             ]
         );
-        Yii::$app->mailer
+        return Yii::$app->mailer
             ->compose()
             ->setFrom($this->from)
             ->setTo($this->to)

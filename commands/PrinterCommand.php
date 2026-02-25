@@ -64,8 +64,10 @@ class PrinterCommand extends D3CommandController
         /** @var AlertConfig $alert */
         $alert = $printer->getStatusFromPrinter();
         if ($chackAndSendAlertMessage && $alert->warningMustBeSent( $prevAlert)) {
+            $this->out('Send alert message');
             $printer->sendAlertEmail($alert);
         } elseif ($sendAlertMessage) {
+            $this->out('Send test alert message');
             $printer->sendAlertEmail($alert);
         }
 
