@@ -13,8 +13,6 @@ use eaBlankonThema\widget\ThPanel;
  * @var AlertConfig $alert
  */
 
-
-ThPanel::widget();
 $body = '';
 if ($errorMessage) {
     $body .= '<div class="alert alert-danger">'.$errorMessage.'</div>';
