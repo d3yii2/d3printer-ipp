@@ -31,7 +31,7 @@ class StatusController extends Controller
                 'class' => 'yii\web\JsonResponseFormatter',
             ];
         } catch (Exception $e) {
-            Yii::error($e->getMessage());
+            Yii::error($e);
         }
     }
 

@@ -352,4 +352,19 @@ class BasePrinter  extends Component implements PrinterInterface
             ->getSpoolerComponent()
             ->deleteSpoolFile($this->printerName, $filename);
     }
+
+    public function getPrinterCode(): string
+    {
+        return $this->name;
+    }
+
+    /**
+     * @throws InvalidConfigException
+     */
+    public function getSpoolDirectory(): string
+    {
+        return $this
+            ->getSpoolerComponent()
+            ->getSpoolDirectory($this->printerName);
+    }
 }
