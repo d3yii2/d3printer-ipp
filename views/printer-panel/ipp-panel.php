@@ -43,6 +43,7 @@ if ($alert) {
     foreach ($alert->getDisplayList() as $item) {
         if ($item['ruleObject']::getType() === $item['ruleObject']::TYPE_PRINT) {
             $link = $item['ruleObject']->getValueLabel();
+            $link['printerComponentName'] = $printer->printerComponentName;
             $link['ru'] = ReturnUrl::getToken();
             $displayValue = ThButton::widget([
                 'icon' => ThButton::ICON_PRINT,
