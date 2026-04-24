@@ -29,7 +29,12 @@ if ($printer) {
             <tr>
                 <td>IP</td>
                 <td>'.$printer->host.':'.$printer->port.'</td>
-            </tr>';
+            </tr>
+            <tr>
+                <td>Component</td>
+                <td>'.$printer->printerComponentName.'</td>
+            </tr>
+';
 } else {
     $header = 'Printer Error';
 }
