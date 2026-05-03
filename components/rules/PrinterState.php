@@ -12,6 +12,7 @@ class PrinterState extends \obray\ipp\enums\PrinterState implements RulesInterfa
         \obray\ipp\enums\PrinterState::stopped => 'stopped',
         \obray\ipp\enums\PrinterState::idle => 'idle',
         \obray\ipp\enums\PrinterState::processing => 'processing',
+        \obray\ipp\enums\PrinterState::offline => 'Offline',
     ];
 
     public static function getAttributeName(): string
@@ -35,12 +36,13 @@ class PrinterState extends \obray\ipp\enums\PrinterState implements RulesInterfa
 
     public function isError(): bool
     {
-        return $this->value === self::stopped;
+        return $this->value === self::stopped
+            || $this->value === self::offline;
     }
 
     public function getWarningMessage(): string
     {
-        return $this->isError();
+        return '';
     }
 
     public function getErrorMessage(): string

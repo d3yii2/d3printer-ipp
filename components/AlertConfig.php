@@ -42,6 +42,11 @@ abstract class AlertConfig extends Component
     }
 
 
+    /**
+     * Load data in rules from printer attributes
+     * @param IPPPrinterAttributes|null $attributes
+     * @return void
+     */
     public function loadAttributes(
         ?IPPPrinterAttributes $attributes = null
     ): void
@@ -56,6 +61,9 @@ abstract class AlertConfig extends Component
                 continue;
             }
             $ruleAttributeName = $ruleClassName::getAttributeName();
+            if (!$attributes->isSetAttribute($ruleAttributeName)) {
+                continue;
+            }
             $ruleAttributes = $attributes->$ruleAttributeName;
 
             if (!is_array($ruleAttributes)) {

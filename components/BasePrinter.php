@@ -2,10 +2,12 @@
 
 namespace d3yii2\d3printeripp\components;
 
+
 use d3yii2\d3printeripp\interfaces\PrinterInterface;
 use d3yii2\d3printeripp\types\PrinterAttributes;
 use d3yii2\d3printeripp\types\PrinterAttributeValues;
 use InvalidArgumentException;
+use obray\ipp\enums\PrinterState as PrinterStateAlias;
 use obray\ipp\exceptions\AuthenticationError;
 use obray\ipp\exceptions\HTTPError;
 use obray\ipp\Printer;
@@ -136,6 +138,7 @@ class BasePrinter  extends Component implements PrinterInterface
     }
 
     /**
+     * get attributes from printer and load data in alert config rules
      * @param bool $withAttributes
      * @return object
      * @throws AuthenticationError
@@ -153,7 +156,7 @@ class BasePrinter  extends Component implements PrinterInterface
         /** @var AlertConfig $alertConfig */
         $alertConfig = Yii::$app->get($this->alertConfigComponentName, false);
         $alertConfig->loadAttributes($attributes);
-        foreach ($alertConfig->loadedRule as &$rule) {
+        foreach ($alertConfig->loadedRule as $rule) {
             if (property_exists($rule, 'printerComponentName')) {
                 $rule->printerComponentName = $this->printerComponentName;
             }
@@ -215,7 +218,7 @@ class BasePrinter  extends Component implements PrinterInterface
 
 
     /**
-     * create email with alert message and send it
+     * create email with an alert message and send it
      * @param AlertConfig $alert actual printer status
      * @throws InvalidConfigException
      * @throws Exception
@@ -240,7 +243,7 @@ class BasePrinter  extends Component implements PrinterInterface
             $alert->createEmailBody()
         )) {
             throw new Exception('Error sending alert email');
-        };
+        }
     }
 
     /**
@@ -253,7 +256,7 @@ class BasePrinter  extends Component implements PrinterInterface
     ): IPPPayload
     {
         if (!file_exists($filepath)) {
-            throw new InvalidArgumentException("File '{$filepath}' does not exist");
+            throw new InvalidArgumentException("File '$filepath' does not exist");
         }
         return $this->printContent(file_get_contents($filepath), $copies, $requestId);
     }
@@ -309,14 +312,26 @@ class BasePrinter  extends Component implements PrinterInterface
     }
 
     /**
+     * get from printer all attributes
      * @throws AuthenticationError
      * @throws Exception
      * @throws HTTPError
      */
     public function getPrinterAttributes(): IPPPrinterAttributes
     {
-        $responsePayload = $this->getPrinter()->getAttributes();
-        $printerAttributes = $responsePayload->printerAttributes ?? null;
+        try {
+            $responsePayload = $this->getPrinter()->getAttributes();
+            $printerAttributes = $responsePayload->printerAttributes ?? null;
+        } catch (\Exception $e) {
+            /** if curl error, set status offline */
+            if (strpos($e->getMessage(), 'curl error:') !== 0) {
+                throw $e;
+            }
+            $printerAttributes = new IPPPrinterAttributes();
+            $printerAttributes->set(PrinterAttributes::PRINTER_STATE, PrinterStateAlias::offline);
+            $printerAttributes = [$printerAttributes];
+        }
+
         if ($printerAttributes
             &&!empty($printerAttributes[0])
             && $printerAttributes[0] instanceof IPPPrinterAttributes
@@ -346,6 +361,9 @@ class BasePrinter  extends Component implements PrinterInterface
         return count($this->getSpoolDirectoryFiles());
     }
 
+    /**
+     * @throws InvalidConfigException
+     */
     public function deleteSpoolDirectoryFile(string $filename): bool
     {
         return $this
