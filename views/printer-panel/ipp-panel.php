@@ -52,6 +52,7 @@ if ($alert) {
             ]);
         } elseif ($item['ruleObject']::getType() === $item['ruleObject']::TYPE_RELOAD) {
             $link = $item['ruleObject']->getValueLabel();
+            $link['printerComponentName'] = $printer->printerComponentName;
             $link['ru'] = ReturnUrl::getToken();
             $displayValue = ThButton::widget([
                 'icon' => ThButton::ICON_REFRESH,

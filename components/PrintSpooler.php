@@ -23,13 +23,9 @@ class PrintSpooler extends Component
     private array $printerProblems = [];
     private array $printerFilesProblems = [];
     private array $canNotUnlinkFiles = [];
-    
+
     public function run(): void
     {
-        $this->printers = [];
-        $this->printerProblems = [];
-        $this->printerFilesProblems = [];
-        $this->canNotUnlinkFiles = [];
         foreach ($this->printersComponentNames as $printerComponentName) {
             /**
              * load printer, if not loaded yet
