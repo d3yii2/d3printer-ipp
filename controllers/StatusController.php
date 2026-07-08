@@ -39,7 +39,7 @@ class StatusController extends Controller
      * @param string|null $printerSlug
      * @return array|array[]
      */
-    public function actionIndex(string $printerSlug = null): array
+    public function actionIndex(?string $printerSlug = null): array
     {
         $response = [];
 
