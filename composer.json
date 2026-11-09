@@ -21,19 +21,7 @@
     },
     "autoload": {
         "psr-4": {
-            "app\\components\\printer\\": "src/printer/",
-            "app\\components\\": "src/"
-        }
-    },
-    "autoload-dev": {
-        "psr-4": {
-            "app\\tests\\": "tests/"
-        }
-    },
-    "extra": {
-        "yii2-extension": {
-            "name": "ipp-printer-manager",
-            "version": "1.0.0"
+          "d3yii2\\d3printeripp\\": ""
         }
     }
 }
