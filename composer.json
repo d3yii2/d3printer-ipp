@@ -20,15 +20,9 @@
         "ext-curl": "*"
     },
     "autoload": {
-        "psr-4": {
-            "app\\components\\printer\\": "src/printer/",
-            "app\\components\\": "src/"
-        }
-    },
-    "autoload-dev": {
-        "psr-4": {
-            "app\\tests\\": "tests/"
-        }
+      "psr-4": {
+        "d3yii2\\d3printeripp\\": "",
+      }
     },
     "extra": {
         "yii2-extension": {
